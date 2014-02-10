@@ -1,4 +1,4 @@
-require(['client/model.js', 'client/view.js'], function(model, view) {
+require([window.location.origin+'/client/model.js', window.location.origin+'/client/view.js'], function(model, view) {
 
 //check the url location.pathname and send data to the database (from model.js)
 	$(document).ready(function() 
