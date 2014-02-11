@@ -1,1 +1,1 @@
-I am a very very happy paragraph without any line breaks
+I am a very very happy paragraph without any line breaks. This is the affected text.
