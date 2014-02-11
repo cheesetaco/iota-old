@@ -1,3 +1,6 @@
-I am a very very happy sentence 
-with line breaks. Hi there. This 
-is some affected text.
+I am a very very happy sentence with 
+line breaks. affected text affected 
+text affected text affected text 
+affected text affected text affected 
+text affected text affected text 
+affected text 
