@@ -1,5 +1,6 @@
 I am a very very happy sentence with 
-line breaks. This is affected text. 
+line breaks. Hi! I'm here to mess 
+everything up. This is affected text. 
 This is affected text. This is 
 affected text. This is affected text. 
 This is affected text. 
