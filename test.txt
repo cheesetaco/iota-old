@@ -1,6 +1,5 @@
 I am a very very happy sentence with 
-line breaks. affected text affected 
-text affected text affected text 
-affected text affected text affected 
-text affected text affected text 
-affected text 
+line breaks. This is affected text. 
+This is affected text. This is 
+affected text. This is affected text. 
+This is affected text. 
