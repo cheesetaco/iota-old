@@ -1,1 +1,3 @@
-I am a very very happy paragraph without any line breaks. This is the affected text.
+I am a very very happy sentence 
+with line breaks. This is some 
+affected text.
