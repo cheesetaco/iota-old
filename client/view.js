@@ -12,7 +12,6 @@ define(function() {
 				location.pathname = pathTree +"/"+ pathSeed;
 			else
 				location.pathname = pathSeed;
-
 		})
 	}
 
