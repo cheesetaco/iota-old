@@ -1,19 +1,19 @@
 define(function() {
 	function renderModel(model) {
-		var objectSpace = [];
+		console.log(model);
 
-		for (i=0;i<model.length;i++)
-		{
-			var content = model[i].content,
-				id = model[i].id,
-				template = "<seed id='"+ id +"'>"+ content +"</seed>";
+		$('div#content').append(model);
 
-			objectSpace.push(template);
-		}
-		// console.log(objectSpace)
-		var parent = $('div#content');
-		parent.children().remove()
-		parent.append(objectSpace)
+		$('seed').on('click', function(event) {
+			var pathTree = location.pathname,
+				pathSeed = $(this).attr('name');
+			
+			if (pathTree !== "/")
+				location.pathname = pathTree +"/"+ pathSeed;
+			else
+				location.pathname = pathSeed;
+
+		})
 	}
 
 

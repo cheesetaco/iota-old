@@ -1,5 +1,6 @@
 var http = require('http'),
 	fs = require('fs'),
+	neo4j = require('node-neo4j'),
 	mysql = require('mysql');
 
 
@@ -15,49 +16,52 @@ console.log('Server running at http://127.0.0.1:8080/');
 
 function requestListener(request, response) {
 	// console.log(__dirname);
-	console.log("Q: "+request.url);
+
 
 	function routeList() {
-		var getChildren = new RegExp("/getChildren\\??.*");
-		var allroutes= /(.*\/)*/;
+		var getChildren = new RegExp("/getChildren\\??.*"),
+			allroutes= /(.*\/)*/;
 
-		// index.html
-		if (request.url == "/"){
-			
-			console.log('S: ' + request.url)
-			
-			routeToFile('index.html');	
-		}
 		// ajax request
-		else if (request.url.match(getChildren))
+		if (request.url.match(getChildren))
 		{	
-			console.log('S: ' + "getChildren")
+			console.log("ajax: "+request.url);
 			
 			response.writeHead(200, {"Content-Type": "text/json"})
 
 			request.on('data', function(data) {
-				// console.log(data);
-				var jsonObject = JSON.parse(data); // parse buffer into an object
-				var pid = jsonObject.pid;
-				var pid = pid.split('/').pop();
-				console.log(pid);
-				var query = "SELECT * FROM objects WHERE id='"+pid+"'";
-				
-				askDatabase(query);
+				var jsonObject = JSON.parse(data), // parse buffer into an object
+					paths = jsonObject.paths, // ['quorum', 'users', 'tomas']
+					characterSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+					characterSet = characterSet.split(""),
+					query = "match ";
+
+				// match (a:object {name:"1"})-[:owns]->(b:object {name:"2"}) return b
+				var length = paths.length;
+				for (i=0; i<length; i++) { 
+					if (i < length-1)
+						query += '('+characterSet[i]+':object {name:"'+paths[i]+'"})-[:owns]->';
+					else
+						query += '('+characterSet[i]+':object {name:"'+paths[i]+'"}) return '+characterSet[i]+'.id';
+				}
+
+				askNeo(query);
+
+				// askDatabase(query);
 			})
 
 		}
 		//file.js
 		else if(fileTest())
 		{
-			console.log('S: ' + "file")
+			console.log("file: " +request.url);
 			var filePath = "." + request.url;
 			routeToFile(filePath, "text/javascript");
 		}
 		// all other url requests (location.pathname) - people make these requests directly
 		else if(allroutes.test(request.url))
 		{
-			console.log('S: ' + "allroutes" + request.url)
+			console.log("allroutes: " + request.url)
 			routeToFile("index.html", "text/html")
 		}
 		
@@ -69,6 +73,53 @@ function requestListener(request, response) {
 		}
 
 	}
+
+	var askNeo = function(query, callback) {
+	
+	console.log("query: "+query)
+		var db = new neo4j('http://kylerutland:froffles23@localhost:7474');
+		var res = db.cypherQuery(query, function(err, result) 
+		{
+    		if(err) throw err;
+    		var currentObjID = result.data[0],
+				query2 = 'match (:object {id:"'+currentObjID+'"})-[:contains]->(n:block) return n.id';
+
+		console.log("query2"+query2);	
+			db.cypherQuery(query2, function(err,result) 
+			{
+				if(err) throw err;
+				var blockIDlist = result.data,
+					length = blockIDlist.length,
+					sqlQuery = 'SELECT * FROM blocks WHERE id in (';
+
+				if (length > 1) {
+					for (i=0;i<length;i++) 
+					{
+						if (length == 1)
+							sqlQuery += '"'+blockIDlist[i]+'")';
+						else if (i < length-1)
+							sqlQuery += '"'+blockIDlist[i]+'",'
+						else 
+							sqlQuery += '"'+blockIDlist[i]+'")'
+					}
+				}
+				else if (length == 1)
+				{
+					sqlQuery = 'SELECT * FROM blocks WHERE id='+'"'+blockIDlist[0]+'"'
+				}
+				else if (length == 0)
+					throw err;
+
+				console.log(sqlQuery);
+
+				askDatabase(sqlQuery);
+			});
+
+
+
+		});
+
+	}
 	var askDatabase = function(query) {
 		var connection = mysql.createConnection({
 			host     : 'localhost',
@@ -77,22 +128,19 @@ function requestListener(request, response) {
 			database : 'iota',
 		});
 
-		// console.log(query);
+
 		connection.query(query, function (err, rows, fields) {
 			if (err) throw err;
 
+			var blocksArray = [];
 			for(i=0;i<rows.length;i++)
 			{
-				var content = rows[i].content.toString()
-				// console.log(content);
-				rows[i].content = content;
-				// console.log(content);
+					var block = rows[i].content.toString()
+					blocksArray.push(block);
 			};
-			
-			var result = JSON.stringify(rows);
-			// console.log(result);
+			var sendList = JSON.stringify(blocksArray);
 
-			response.end(result);
+			response.end(sendList);
 		});
 	}
 
