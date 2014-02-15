@@ -4,29 +4,30 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 
 	$(document).ready(function() 
 	{
+		sendPathnameToModel();
+				
+	})
+
+
+	function sendPathnameToModel() {
 		var pathname = location.pathname,
 			view_renderModel = view.renderModel;
-			// path = pathCatcher(pathname);
 
-		//check if we're at index.html, if not send the last id in the url
-		if (pathname !== "/") 
+		if (pathname !== "/") //check if we're at index.html, if not send the last id in the url
 		{
 			var	arr = pathname.split('/'),
-				paths = arr.splice(1,arr.length);
-				// pid = arr.pop();
+			paths = arr.splice(1,arr.length);
 			
-			console.log(paths)
+			if (pathname[pathname.length-1] == "/") // if theres a "/" at the end of the url
+				paths.pop();
 
-			//send the location data to the model
-			model.loadModel(paths, view_renderModel)
+			model.loadModel(paths, view_renderModel) //send the location data to the model
 		}
 		else //if index.html was directly requested
 		{
 			var path = ["home"];
 			model.loadModel(path, view_renderModel)
 		}
-
-		
-	})
+	}
 
 })

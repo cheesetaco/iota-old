@@ -19,107 +19,107 @@ function requestListener(request, response) {
 
 
 	function routeList() {
-		var getChildren = new RegExp("/getChildren\\??.*"),
+		var location = request.url,
+			getChildren = new RegExp("/getChildren\\??.*"),
 			allroutes= /(.*\/)*/;
 
-		// ajax request
-		if (request.url.match(getChildren))
-		{	
-			console.log("ajax: "+request.url);
+		if (location.match(getChildren)) // ajax request
+		{	console.log("ajax: "+location)
 			
-			response.writeHead(200, {"Content-Type": "text/json"})
-
-			request.on('data', function(data) {
-				var jsonObject = JSON.parse(data), // parse buffer into an object
-					paths = jsonObject.paths, // ['quorum', 'users', 'tomas']
-					characterSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-					characterSet = characterSet.split(""),
-					query = "match ";
-
-				// match (a:object {name:"1"})-[:owns]->(b:object {name:"2"}) return b
-				var length = paths.length;
-				for (i=0; i<length; i++) { 
-					if (i < length-1)
-						query += '('+characterSet[i]+':object {name:"'+paths[i]+'"})-[:owns]->';
-					else
-						query += '('+characterSet[i]+':object {name:"'+paths[i]+'"}) return '+characterSet[i]+'.id';
-				}
-
-				askNeo(query);
-
-				// askDatabase(query);
-			})
-
+			getID_CurrentPathObject(askNeo_whatObjectContains);
 		}
-		//file.js
-		else if(fileTest())
-		{
-			console.log("file: " +request.url);
-			var filePath = "." + request.url;
-			routeToFile(filePath, "text/javascript");
+		else if(fileTest()) //file.js
+		{	//console.log("file: " +request.url);
+			var filePath = "." + location
+			
+			routeToFile(filePath, "text/javascript")
 		}
-		// all other url requests (location.pathname) - people make these requests directly
-		else if(allroutes.test(request.url))
-		{
-			console.log("allroutes: " + request.url)
+		else if(allroutes.test(location)) // all other url requests (location.pathname) - people make these requests directly
+		{	console.log("allroutes: " + location)
+			
 			routeToFile("index.html", "text/html")
 		}
+		else
+			console.log("something didnt load")
 		
 		function fileTest() {
-			var req = request.url
 			var js = /.*\.js/;
-			if (js.test(req))
+			if (js.test(location))
 				return true
 		}
 
 	}
+	var getID_CurrentPathObject = function(callback) 
+	{
+		response.writeHead(200, {"Content-Type": "text/json"})
 
-	var askNeo = function(query, callback) {
-	
-	console.log("query: "+query)
+		request.on('data', function(data) {
+			var characterSet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+				characterSet = characterSet.split(""),
+				
+				jsonObject 	= JSON.parse(data), 	// parse buffer into an object
+				paths 		= jsonObject.paths, 	// ['quorum', 'users', 'tomas']
+				length 	= paths.length,
+				query 	= "match ";					// match (a:object {name:"1"})-[:owns]->(b:object {name:"2"}) return b
+
+			for (i=0; i<length; i++) { 
+				if (i < length-1)
+					query += '('+characterSet[i]+':object {name:"'+paths[i]+'"})-[:owns]->';
+				else
+					query += '('+characterSet[i]+':object {name:"'+paths[i]+'"}) return '+characterSet[i]+'.id';
+			}
+
+			callback(query);
+		});
+	}
+
+
+
+	var askNeo_whatObjectContains = function(query) 
+	{	console.log("query: "+query)	
 		var db = new neo4j('http://kylerutland:froffles23@localhost:7474');
-		var res = db.cypherQuery(query, function(err, result) 
+		
+		db.cypherQuery(query, function(err, result)
 		{
     		if(err) throw err;
-    		var currentObjID = result.data[0],
-				query2 = 'match (:object {id:"'+currentObjID+'"})-[:contains]->(n:block) return n.id';
+    		var currentPathObjID = result.data[0],
+				query2 = 'match (:object {id:"'+currentPathObjID+'"})-[:contains]->(n:block) return n.id';
 
-		console.log("query2"+query2);	
+			console.log("query2: "+query2);
+
+			formSQLquery_selectBlocks(query2)
+		});
+
+		function formSQLquery_selectBlocks(query2) 
+		{
 			db.cypherQuery(query2, function(err,result) 
-			{
-				if(err) throw err;
+			{	if(err) throw err;
+				
 				var blockIDlist = result.data,
 					length = blockIDlist.length,
 					sqlQuery = 'SELECT * FROM blocks WHERE id in (';
-
+				
 				if (length > 1) {
 					for (i=0;i<length;i++) 
 					{
-						if (length == 1)
-							sqlQuery += '"'+blockIDlist[i]+'")';
-						else if (i < length-1)
+						if (i < length-1)
 							sqlQuery += '"'+blockIDlist[i]+'",'
 						else 
 							sqlQuery += '"'+blockIDlist[i]+'")'
 					}
 				}
 				else if (length == 1)
-				{
 					sqlQuery = 'SELECT * FROM blocks WHERE id='+'"'+blockIDlist[0]+'"'
-				}
 				else if (length == 0)
 					throw err;
 
 				console.log(sqlQuery);
-
 				askDatabase(sqlQuery);
 			});
-
-
-
-		});
-
+		}
 	}
+
+
 	var askDatabase = function(query) {
 		var connection = mysql.createConnection({
 			host     : 'localhost',
@@ -129,7 +129,8 @@ function requestListener(request, response) {
 		});
 
 
-		connection.query(query, function (err, rows, fields) {
+		connection.query(query, function (err, rows, fields) 
+		{
 			if (err) throw err;
 
 			var blocksArray = [];

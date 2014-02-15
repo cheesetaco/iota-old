@@ -8,6 +8,9 @@ define(function() {
 			var pathTree = location.pathname,
 				pathSeed = $(this).attr('name');
 			
+			if (pathTree[pathTree.length-1] == "/") //if theres a "/" at the end of the url
+				pathTree = pathTree.slice(0, -1);
+
 			if (pathTree !== "/")
 				location.pathname = pathTree +"/"+ pathSeed;
 			else
