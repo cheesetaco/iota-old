@@ -5,8 +5,22 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 	$(document).ready(function() 
 	{
 		sendPathnameToModel();
-				
+		setupEditButton();
 	})
+
+
+	function setupEditButton() {
+		var $button = $('div#edit');
+		$button.on("click.edit", function() {
+			if ($button.attr("toggle") == "off")
+			{
+				var commitBlock = model.commitBlock;	
+				view.editModeOn(commitBlock);
+			}
+			else if ($button.attr("toggle") == "on")
+				view.editModeOff();
+		})
+	}
 
 
 	function sendPathnameToModel() {
@@ -29,5 +43,7 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 			model.loadModel(path, view_renderModel)
 		}
 	}
+
+
 
 })

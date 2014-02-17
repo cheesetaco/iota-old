@@ -3,16 +3,39 @@
 	padding	:0;
 	margin 	:0;
 }
-seed, p {
+seed, block {
 	display		: block;
 	line-height	: 1.5em; 
 	font-family	: helvetica; 
-	font-size	: 16px}
+	font-size	: 16px;
+	border-bottom:green;
+}
+seed {
+	color: blue;
+}
+form#addBlock input {
+	width: 50%;
+	min-height: 3em;
+}
+div.close-form {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	background-color: gray;
+}
 div#content {
 	position	: absolute; 
 	left		: 25%; 
 	width		: 50%; 
 	margin-top	: 3em
+}
+div#edit {
+	position:absolute;
+	width: 30px;
+	height: 30px;
+	background-color: green;
+	left:0;
+	bottom:0;
 }
 </style>
 
@@ -22,5 +45,8 @@ div#content {
 <!-- content dynamically loaded here based on url and ajax requests-->
 </div>
 
+<div id="edit" toggle="off">
+
+</div>
 <script src="http://localhost:8080/lib/jquery.js"></script>
 
