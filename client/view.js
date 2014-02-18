@@ -48,34 +48,39 @@ define(function() {
 		function setFormHandler(model_commitBlock) {
 			var clickedAlready = false;
 
-			globals.$contentContainer.on('click.addForm', 'block', function() 
+			globals.$contentContainer.attr('contenteditable', 'true');
+			globals.$contentContainer.on("change keyup paste", function(event)
 			{
-				var $prevBlock = $(this);
-
-				if (clickedAlready == false) {
-					var 
-						$form = $('<form id="addBlock"><input type="text"></input><div class="close-form">x</form>'),
-						newSort = $prevBlock.prevAll('block').length+2,
-						parentPath = getPathTree(),
-						parentNodes = parentPath.split('/'),
-						parentNodes = parentNodes.splice(1,parentNodes.length);
-
-					$form
-						.insertAfter($prevBlock)
-						.on('submit', function(event) {
-							var input = $(this).find('input'),
-								content = $(input).attr('value');
-							
-							event.preventDefault()
-
-							closeForm();
-
-							model_commitBlock(parentNodes, content, newSort, $prevBlock);
-						})
-
-					clickedAlready = true;
-				}
+    			console.log(event)
 			})
+			// globals.$contentContainer.on('click.addForm', 'block', function() 
+			// {
+			// 	var $prevBlock = $(this);
+
+			// 	if (clickedAlready == false) {
+			// 		var 
+			// 			$form = $('<form id="addBlock"><input type="text"></input><div class="close-form">x</form>'),
+			// 			newSort = $prevBlock.prevAll('block').length+2,
+			// 			parentPath = getPathTree(),
+			// 			parentNodes = parentPath.split('/'),
+			// 			parentNodes = parentNodes.splice(1,parentNodes.length);
+
+			// 		$form
+			// 			.insertAfter($prevBlock)
+			// 			.on('submit', function(event) {
+			// 				var input = $(this).find('input'),
+			// 					content = $(input).attr('value');
+							
+			// 				event.preventDefault()
+
+			// 				closeForm();
+
+			// 				model_commitBlock(parentNodes, content, newSort, $prevBlock);
+			// 			})
+
+			// 		clickedAlready = true;
+			// 	}
+			// })
 
 		}
 		function unsetFormHandler() {
@@ -85,12 +90,13 @@ define(function() {
 		function setEffects() {
 			globals.$button.attr('toggle', 'on')
 			globals.$button.css('background-color', 'yellow')
-			globals.$contentContainer.on('mouseover', 'block', function() {
-				$(this).css('border-bottom', '1px solid green')
-			})
-			globals.$contentContainer.on('mouseout', 'block', function() {
-				$(this).css('border-bottom', 'none')
-			})
+
+			// globals.$contentContainer.on('mouseover', 'block', function() {
+			// 	$(this).css('border-bottom', '1px solid green')
+			// })
+			// globals.$contentContainer.on('mouseout', 'block', function() {
+			// 	$(this).css('border-bottom', 'none')
+			// })
 		}
 		function unsetEffects() {
 			globals.$button.attr('toggle', 'off')
