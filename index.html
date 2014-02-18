@@ -11,7 +11,11 @@ seed, block {
 	border-bottom:green;
 }
 seed {
-	color: blue;
+	color: #FF4719;
+}
+seed:hover {
+	text-decoration: underline;
+	cursor: pointer;
 }
 form#addBlock input {
 	width: 50%;
@@ -37,6 +41,11 @@ div#edit {
 	left:0;
 	bottom:0;
 }
+[contenteditable="true"]:active,
+[contenteditable="true"]:focus {
+	border: none;
+	outline: none;
+}
 </style>
 
 <script data-main="http://localhost:8080/client/main.js" src="http://localhost:8080/lib/require.js"></script>
@@ -49,4 +58,5 @@ div#edit {
 
 </div>
 <script src="http://localhost:8080/lib/jquery.js"></script>
+<script src="http://localhost:8080/lib/diff.js"></script>
 

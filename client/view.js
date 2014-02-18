@@ -17,7 +17,7 @@ define(function() {
 		$seed.on('click.seed', function(event) {
 			var	pathTree = getPathTree(),
 				pathSeed = $(this).attr('name');
-			
+
 			if (pathTree !== "/")
 				location.pathname = pathTree +"/"+ pathSeed;
 			else

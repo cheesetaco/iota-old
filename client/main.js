@@ -8,7 +8,6 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		setupEditButton();
 	})
 
-
 	function setupEditButton() {
 		var $button = $('div#edit');
 		$button.on("click.edit", function() {
@@ -21,7 +20,6 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				view.editModeOff();
 		})
 	}
-
 
 	function sendPathnameToModel() {
 		var pathname = location.pathname,
