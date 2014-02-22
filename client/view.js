@@ -4,12 +4,19 @@ define(function() {
 		$contentContainer : $('div#content')
 	}
 
+	function packageRouter(packageType) {
+		if (packageType==404)
+			console.log('wrongobongos')
+		else
+			renderModel(packageType)
+	}
 	function renderModel(model) {
-		console.log(model);
-
 		$('div#content').append(model);
 
 		setSeedHandlers();
+	}
+	function display404() {
+		console.log(40404)
 	}
 	function setSeedHandlers(elements) {
 		var $seed = elements ? elements : $('seed');
@@ -116,7 +123,7 @@ define(function() {
 	}
 
 	return {
-		renderModel: renderModel,
+		packageRouter: packageRouter,
 		editModeOn:editModeOn,
 		editModeOff:editModeOff
 	}

@@ -1,6 +1,6 @@
 define(function() {
 	
-	function loadModel(paths, view_renderModel) {
+	function loadModel(paths, view_packageRouter) {
 
 		$.ajax({
 			url: '/?getChildren',
@@ -8,7 +8,11 @@ define(function() {
 			dataType: "json",
 			data: JSON.stringify({parentNodes: paths}),//send as a Buffer? so node can read it
 			success: function(response) {
-				view_renderModel(response) //send the now cached Model to the view
+				console.log(response)
+				if (response == 404)
+					view_packageRouter(404)
+				else
+					view_packageRouter(response) //send the now cached Model to the view
 			}
 
 		})

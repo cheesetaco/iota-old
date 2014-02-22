@@ -56,6 +56,20 @@ function requestListener(request, response) {
 		}
 
 	}
+
+
+	function action_getChildren() {
+		response.writeHead(200, {"Content-Type": "text/json"})
+
+		request.on('data', function(data) {
+			var jsonObject = JSON.parse(data),
+				parentNodes = jsonObject.parentNodes,
+				query = neo_getIDofEndNode(parentNodes);
+
+			console.log(query)
+			askNeo(query, neo_getBlocksFromID);
+		})
+	}
 	function action_commitBlock() {
 		response.writeHead(200, {"Content-Type": "text/json"})
 
@@ -72,34 +86,7 @@ function requestListener(request, response) {
 			askNeo(query, neo_createBlock, object)
 		})
 	}
-	function action_getChildren() {
-		response.writeHead(200, {"Content-Type": "text/json"})
 
-		request.on('data', function(data) {
-			var jsonObject = JSON.parse(data),
-				parentNodes = jsonObject.parentNodes,
-				query = neo_getIDofEndNode(parentNodes);
-
-			console.log(query)
-			askNeo(query, neo_getBlocksFromID);
-		})
-	}
-
-
-	function neo_createBlock(result, object) {
-		var parentID = result.data[0],
-			id = object.id,
-			sort = object.sort,
-			content = object.content,
-
-		query = 'match (a:object {id:"'+parentID+'"}) create (a)-[:contains]->(b:block {id:"'+id+'",sort:'+sort+'}) return a,b';
-		console.log("create block: " + query)
-		askNeo(query)
-		
-		var query = 'INSERT INTO blocks VALUES("'+id+'", "<block>'+content+'</block>")';
-		console.log("create block: " + query)
-		askSQL(query, displayBlocks)
-	}
 
 	function displayBlocks(rows) {
 			var blocksArray = [];
@@ -110,9 +97,16 @@ function requestListener(request, response) {
 			};
 			var sendList = JSON.stringify(blocksArray);
 
-			console.log(sendList)
+			console.log(sendList)	
 			response.end(sendList);
 	}
+	function display404() {
+		var message = 404;
+		var message = JSON.stringify(message)
+		console.log(message)
+		response.end(message)
+	}
+
 	function sql_getBlockContent(result) {
 		var blockIDlist = result.data,
 			length = blockIDlist.length,
@@ -130,16 +124,30 @@ function requestListener(request, response) {
 		else if (length == 1)
 			sqlQuery = 'SELECT * FROM blocks WHERE id='+'"'+blockIDlist[0]+'"'
 		else if (length == 0)
-			throw err;
+			console.log("sql: no blocks of that id")
 
-		console.log(sqlQuery);
+		// console.log(sqlQuery);
 		askSQL(sqlQuery, displayBlocks);		
+	}
+	function neo_createBlock(result, object) {
+		var parentID = result.data[0],
+			id = object.id,
+			sort = object.sort,
+			content = object.content,
+
+		query = 'match (a:object {id:"'+parentID+'"}) create (a)-[:contains]->(b:block {id:"'+id+'",sort:'+sort+'}) return a,b';
+		console.log("create block: " + query)
+		askNeo(query)
+		
+		var query = 'INSERT INTO blocks VALUES("'+id+'", "<block>'+content+'</block>")';
+		// console.log("create block: " + query)
+		askSQL(query, displayBlocks)
 	}
 	function neo_getBlocksFromID(result) {
 		var newPathID = result.data[0],
 			query = 'match (:object {id:"'+newPathID+'"})-[:contains]->(n:block) return n.id order by n.sort';
 
-		console.log(query)
+		// console.log(query)
 		askNeo(query, sql_getBlockContent)
 	}
 	function neo_getIDofEndNode(parentNodes) {
@@ -156,7 +164,7 @@ function requestListener(request, response) {
 			}
 			else
 			{
-				var phrase = "(parentNode {name:'"+nodes[i]+"'}) return parentNode.id";
+				var phrase = "(currentNode {name:'"+nodes[i]+"'}) return currentNode.id";
 				query += phrase
 			}
 		}
@@ -170,11 +178,14 @@ function requestListener(request, response) {
 
 		db.cypherQuery(query, function(err, result) {
 			if(err) throw err;
+			
+			console.log(result);
 
-			if (callback)
+			if (result.data[0]!==undefined && callback)
 				callback(result, object)
 			else
-				return result
+				display404();
+
 		})
 	}
 	function askSQL(query, callback) {
@@ -196,6 +207,7 @@ function requestListener(request, response) {
 				return rows
 		});
 	}
+
 
 
 
