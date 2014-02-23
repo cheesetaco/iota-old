@@ -1,7 +1,8 @@
 define(function() {
 	var globals = {
-		$button : $('div#edit'),
-		$contentContainer : $('div#content')
+		$editButton : $('div#edit div#editButton'),
+		$contentContainer : $('div#content'),
+		$commitButton : $('div#edit div#commitChanges')
 	}
 
 	function packageRouter(packageType) {
@@ -11,15 +12,12 @@ define(function() {
 			renderModel(packageType)
 	}
 	function renderModel(model) {
-		$('div#content').append(model);
+		globals.$contentContainer.append(model.blocks);
 
 		setSeedHandlers();
 	}
-	function display404() {
-		console.log(40404)
-	}
 	function setSeedHandlers(elements) {
-		var $seed = elements ? elements : $('seed');
+		var $seed = elements ? elements : $('seed'); //refresh select seeds else all
 
 		$seed.on('click.seed', function(event) {
 			var	pathTree = getPathTree(),
@@ -35,83 +33,76 @@ define(function() {
 		$('seed').unbind('click.seed')
 	}
 
-	function editModeOn(model_commitBlock) {
-		unsetSeedHandlers();
-		setEffects();
-		setFormHandler(model_commitBlock);
+	function editMode(mode, model_commitChanges) {
+		return this.init(mode, model_commitChanges)
 	}
-	function editModeOff() {
-		setSeedHandlers();
-		unsetEffects();
-		unsetFormHandler();
-	}
-
-		function closeForm() {
-			var $form = $('form#addBlock');
-			$form.empty();
-			$form.remove();
-
-		}
-		function setFormHandler(model_commitBlock) {
-			var clickedAlready = false;
-
-			globals.$contentContainer.attr('contenteditable', 'true');
-			globals.$contentContainer.on("change keyup paste", function(event)
+	editMode.prototype = {
+		init: function(mode, model_commitChanges) 
+		{
+			if (mode == "on")
 			{
-    			console.log(event)
+				unsetSeedHandlers();
+
+				globals.$editButton.attr('toggle', 'on')
+				globals.$editButton.css('background-color', 'yellow')
+				globals.$contentContainer.attr('contenteditable', 'true');
+
+				this.startupTextEditor();
+				var stage = this.armCommitButton(model_commitChanges);
+				return stage
+			}
+			else if (mode == "off")
+			{
+				setSeedHandlers();
+
+				globals.$editButton.attr('toggle', 'off')
+				globals.$editButton.css('background-color', 'green')	
+				globals.$contentContainer.removeAttr('contenteditable');
+
+				this.shutdownTextEditor();
+				this.disarmCommitButtion();
+			}
+		},
+		startupTextEditor: function() 
+		{
+			globals.$contentContainer.on("keydown.enter", function(e){
+				if (e.which == 13) {
+					e.preventDefault();
+					
+					var	block = document.createElement("block"),
+						range = document.createRange(),
+						selection = window.getSelection(),
+						previousBlock = selection.anchorNode.parentElement;
+						
+					range.setStartAfter(previousBlock, 0);
+					
+					block.innerHTML = '&#8203';
+					range.insertNode(block)
+					range.collapse(false) // send cursor to end of selection
+					
+					selection.removeAllRanges();
+					selection.addRange(range);
+				}
+			});
+		},
+		shutdownTextEditor: function() 
+		{
+			globals.$contentContainer.off("keydown.enter")
+		},
+		armCommitButton: function(model_commitChanges) 
+		{
+			globals.$commitButton.on('click.commit', function() {
+
+				var stage = globals.$contentContainer.children('block')
+				console.log(stage)
+				return stage
 			})
-			// globals.$contentContainer.on('click.addForm', 'block', function() 
-			// {
-			// 	var $prevBlock = $(this);
-
-			// 	if (clickedAlready == false) {
-			// 		var 
-			// 			$form = $('<form id="addBlock"><input type="text"></input><div class="close-form">x</form>'),
-			// 			newSort = $prevBlock.prevAll('block').length+2,
-			// 			parentPath = getPathTree(),
-			// 			parentNodes = parentPath.split('/'),
-			// 			parentNodes = parentNodes.splice(1,parentNodes.length);
-
-			// 		$form
-			// 			.insertAfter($prevBlock)
-			// 			.on('submit', function(event) {
-			// 				var input = $(this).find('input'),
-			// 					content = $(input).attr('value');
-							
-			// 				event.preventDefault()
-
-			// 				closeForm();
-
-			// 				model_commitBlock(parentNodes, content, newSort, $prevBlock);
-			// 			})
-
-			// 		clickedAlready = true;
-			// 	}
-			// })
-
+		},
+		disarmCommitButtion: function() 
+		{
+			globals.$commitButton.off('click.commit')
 		}
-		function unsetFormHandler() {
-			globals.$contentContainer.unbind('click.addForm');
-
-		}
-		function setEffects() {
-			globals.$button.attr('toggle', 'on')
-			globals.$button.css('background-color', 'yellow')
-
-			// globals.$contentContainer.on('mouseover', 'block', function() {
-			// 	$(this).css('border-bottom', '1px solid green')
-			// })
-			// globals.$contentContainer.on('mouseout', 'block', function() {
-			// 	$(this).css('border-bottom', 'none')
-			// })
-		}
-		function unsetEffects() {
-			globals.$button.attr('toggle', 'off')
-			globals.$button.css('background-color', 'green')
-			globals.$contentContainer.unbind('mouseover')
-			globals.$contentContainer.unbind('mouseout')
-		}
-
+	}
 
 	function getPathTree() {
 		var pathTree = location.pathname;
@@ -124,8 +115,7 @@ define(function() {
 
 	return {
 		packageRouter: packageRouter,
-		editModeOn:editModeOn,
-		editModeOff:editModeOff
+		editMode:editMode
 	}
 })
 

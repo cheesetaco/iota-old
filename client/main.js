@@ -9,15 +9,15 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 	})
 
 	function setupEditButton() {
-		var $button = $('div#edit');
+		var $button = $('div#edit div#editButton');
 		$button.on("click.edit", function() {
 			if ($button.attr("toggle") == "off")
 			{
-				var commitBlock = model.commitBlock;	
-				view.editModeOn(commitBlock);
+				var stage = new view.editMode("on", model.commitChanges);
+				console.log(stage)
 			}
 			else if ($button.attr("toggle") == "on")
-				view.editModeOff();
+				new view.editMode("off");
 		})
 	}
 
@@ -27,11 +27,12 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 
 		if (pathname !== "/") //check if we're at index.html, if not send the last id in the url
 		{
+			//clean up array
 			var	arr = pathname.split('/'),
-			paths = arr.splice(1,arr.length);
+			paths = arr.splice(1,arr.length); //remove blank array item
 			
-			if (pathname[pathname.length-1] == "/") // if theres a "/" at the end of the url
-				paths.pop();
+			if (pathname[pathname.length-1] == "/")
+				paths.pop(); //remove blank array item
 
 			model.loadModel(paths, view_packageRouter) //send the location data to the model
 		}

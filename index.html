@@ -1,10 +1,10 @@
+<head>
+	<link rel="stylesheet" type='text/css' href="http://localhost:8080/lib/medium.css">
 <style>
 
 * {
 	padding	:0;
 	margin 	:0;
-}
-seed, block {
 	line-height	: 1.5em; 
 	font-family	: helvetica; 
 	font-size	: 16px;
@@ -19,29 +19,31 @@ seed:hover {
 block {
 	display	: block;
 }
-form#addBlock input {
-	width: 50%;
-	min-height: 3em;
-}
-div.close-form {
-	display: inline-block;
-	width: 1em;
-	height: 1em;
-	background-color: gray;
-}
+
 div#content {
 	position	: absolute; 
 	left		: 25%; 
 	width		: 50%; 
-	margin-top	: 3em
+	margin-top	: 3em;
+	display: inline-block;
 }
 div#edit {
 	position:absolute;
-	width: 30px;
-	height: 30px;
+	width: 20%;
+	left:75%;
+	top:1em;
+}
+div#editButton {
+	float:left;
+	width:40%;
+	height: 30px; 
 	background-color: green;
-	left:0;
-	bottom:0;
+}
+div#commitChanges {
+	float:left;
+	width:60%;
+	height: 30px;
+	background-color: pink;
 }
 [contenteditable="true"]:active,
 [contenteditable="true"]:focus {
@@ -52,6 +54,7 @@ div#four0four {
 	font-size: 48px;
 }
 </style>
+</head>
 
 <script data-main="http://localhost:8080/client/main.js" src="http://localhost:8080/lib/require.js"></script>
 
@@ -59,9 +62,10 @@ div#four0four {
 <!-- content dynamically loaded here based on url and ajax requests-->
 </div>
 
-<div id="edit" toggle="off">
-
+<div id="edit">
+	<div id="editButton" toggle="off">edit</div>
+	<div id="commitChanges">Commit Changes</div>
 </div>
 <script src="http://localhost:8080/lib/jquery.js"></script>
-<script src="http://localhost:8080/lib/diff.js"></script>
+
 

@@ -22,7 +22,7 @@ function requestListener(request, response) {
 		var location = request.url,
 			// getChildren = new RegExp("/getChildren\\??.*"),
 			getChildren = location.match(/\/\?getChildren\??.*/),
-			commitBlock = location.match(/\/\?commitBlock/),
+			commitChanges = location.match(/\/\?commitChanges/),
 			allroutes= /(.*\/)*/;
 
 		if (getChildren)
@@ -30,10 +30,10 @@ function requestListener(request, response) {
 			
 			action_getChildren()
 		}
-		else if(commitBlock)
+		else if(commitChanges)
 		{	console.log("ajax: "+location)
 
-			action_commitBlock()
+			action_commitChanges()
 		}
 		else if(fileTest()) //file.js
 		{	//console.log("file: " +request.url);
@@ -50,8 +50,9 @@ function requestListener(request, response) {
 			console.log("something didnt load")
 		
 		function fileTest() {
-			var js = /.*\.js/;
-			if (js.test(location))
+			var js = /.*\.js/,
+				css = /.*\.css/;
+			if (js.test(location) || css.test(location))
 				return true
 		}
 
@@ -70,7 +71,7 @@ function requestListener(request, response) {
 			askNeo(query, neo_getBlocksFromID);
 		})
 	}
-	function action_commitBlock() {
+	function action_commitChanges() {
 		response.writeHead(200, {"Content-Type": "text/json"})
 
 		request.on('data', function(data) {
@@ -88,26 +89,32 @@ function requestListener(request, response) {
 	}
 
 
-	function displayBlocks(rows) {
-			var blocksArray = [];
-			for(i=0;i<rows.length;i++)
-			{
-					var block = rows[i].content.toString()
-					blocksArray.push(block);
-			};
-			var sendList = JSON.stringify(blocksArray);
+	function displayBlocks(rows, object) {
+		var blocksArray = [];
 
-			console.log(sendList)	
-			response.end(sendList);
+		for(i=0;i<rows.length;i++)
+		{
+			var block = rows[i].content.toString();
+
+			blocksArray.push(block);
+		};
+
+		var sendList = JSON.stringify({
+			blocks 	: 	blocksArray,
+			ids 	: 	object.blockIDlist,
+			parentID: 	object.newPathID
+		});
+
+		response.end(sendList);
 	}
-	function display404() {
+	function display404Page() {
 		var message = 404;
 		var message = JSON.stringify(message)
 		console.log(message)
 		response.end(message)
 	}
 
-	function sql_getBlockContent(result) {
+	function sql_getBlockContent(result, newPathID) {
 		var blockIDlist = result.data,
 			length = blockIDlist.length,
 			sqlQuery = 'SELECT * FROM blocks WHERE id in (';
@@ -123,11 +130,10 @@ function requestListener(request, response) {
 		}
 		else if (length == 1)
 			sqlQuery = 'SELECT * FROM blocks WHERE id='+'"'+blockIDlist[0]+'"'
-		else if (length == 0)
-			console.log("sql: no blocks of that id")
 
+		var object = {blockIDlist:blockIDlist, newPathID: newPathID}
 		// console.log(sqlQuery);
-		askSQL(sqlQuery, displayBlocks);		
+		askSQL(sqlQuery, displayBlocks, object);
 	}
 	function neo_createBlock(result, object) {
 		var parentID = result.data[0],
@@ -148,7 +154,7 @@ function requestListener(request, response) {
 			query = 'match (:object {id:"'+newPathID+'"})-[:contains]->(n:block) return n.id order by n.sort';
 
 		// console.log(query)
-		askNeo(query, sql_getBlockContent)
+		askNeo(query, sql_getBlockContent, newPathID)
 	}
 	function neo_getIDofEndNode(parentNodes) {
 		var nodes = parentNodes,
@@ -184,11 +190,11 @@ function requestListener(request, response) {
 			if (result.data[0]!==undefined && callback)
 				callback(result, object)
 			else
-				display404();
+				display404Page();
 
 		})
 	}
-	function askSQL(query, callback) {
+	function askSQL(query, callback, object) {
 		var connection = mysql.createConnection({
 			host     : 'localhost',
 			user     : 'rooster',
@@ -202,7 +208,7 @@ function requestListener(request, response) {
 			if (err) throw err;
 
 			if (callback)
-				callback(rows)
+				callback(rows, object)
 			else
 				return rows
 		});

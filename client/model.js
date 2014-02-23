@@ -1,5 +1,7 @@
 define(function() {
 	
+	var Model = {}
+
 	function loadModel(paths, view_packageRouter) {
 
 		$.ajax({
@@ -9,18 +11,32 @@ define(function() {
 			data: JSON.stringify({parentNodes: paths}),//send as a Buffer? so node can read it
 			success: function(response) {
 				console.log(response)
-				if (response == 404)
-					view_packageRouter(404)
-				else
-					view_packageRouter(response) //send the now cached Model to the view
+				
+				var model = renderModel(response);
+				view_packageRouter(model) //send the now cached Model to the view
 			}
 
 		})
 	}
-	function commitBlock(parentNodes, content, sort, $prevBlock) {
+	function renderModel(response) {
+		var blocks = response.blocks,
+			ids = response.ids,
+			length = ids.length,
+
+			stage = [];
+		for (i=0; i<length; i++)
+		{
+			var block =	"<block id='"+ids[i]+"'>"+blocks[i]+"</block>";
+			stage.push(block)
+		}
+		Model.parent = response.parentID;
+		Model.blocks = stage;
+		return {blocks:stage, parentID: response.parentID}
+	}
+	function commitChanges(parentNodes, content) {
 
 		$.ajax({
-			url: '/?commitBlock',
+			url: '/?commitChanges',
 			type: "POST",
 			dataType: 'json',
 			data: JSON.stringify({
@@ -38,7 +54,7 @@ define(function() {
 	}
 	return {
 		loadModel: loadModel,
-		commitBlock: commitBlock
+		commitChanges: commitChanges
 
 	}
 
