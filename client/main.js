@@ -13,11 +13,10 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		$button.on("click.edit", function() {
 			if ($button.attr("toggle") == "off")
 			{
-				var stage = new view.editMode("on", model.commitChanges);
-				console.log(stage)
+				new editMode("on");
 			}
 			else if ($button.attr("toggle") == "on")
-				new view.editMode("off");
+				new editMode("off");
 		})
 	}
 
@@ -43,6 +42,111 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		}
 	}
 
+	function editMode(mode) {
+		return this.init(mode)
+	}
+	editMode.prototype = {
+		init: function(mode) 
+		{
+			if (mode == "on")
+			{
+				view.armSeedHandlers();
 
+				view.globals.$editButton.attr('toggle', 'on')
+				view.globals.$editButton.css('background-color', 'yellow')
+				view.globals.$contentContainer.attr('contenteditable', 'true');
+
+				this.startupTextEditor();
+
+				var stage = this.armCommitButton();
+				return stage
+			}
+			else if (mode == "off")
+			{
+				view.armSeedHandlers(false);
+
+				view.globals.$editButton.attr('toggle', 'off')
+				view.globals.$editButton.css('background-color', 'green')	
+				view.globals.$contentContainer.removeAttr('contenteditable');
+
+				this.shutdownTextEditor();
+				this.disarmCommitButtion();
+			}
+		},
+		startupTextEditor: function() 
+		{
+			var that = this;
+			view.globals.$contentContainer.on("keydown.enter", function(e){
+				//handle enter key
+				if (e.which == 13) {
+					e.preventDefault();
+					that.newline();
+				}
+			});
+		},
+		shutdownTextEditor: function() 
+		{
+			view.globals.$contentContainer.off("keydown.enter")
+		},
+		armCommitButton: function() 
+		{
+			view.globals.$commitButton.on('click.commit', function() {
+
+				var stage = view.globals.$contentContainer.children('block')
+				console.log(stage)
+				return stage
+			})
+		},
+		disarmCommitButtion: function() 
+		{
+			view.globals.$commitButton.off('click.commit')
+		},
+		newline: function()
+		{
+			var block = document.createElement("block"),
+				range = document.createRange(),
+				userSelection = window.getSelection();
+
+			//if there is no selection i.e. start and end points are the same point
+			if (userSelection.baseNode === userSelection.extentNode
+				&& userSelection.baseOffset === userSelection.extentOffset)
+			{
+				var cursorNode = userSelection.baseNode,
+					cursorPosition = userSelection.baseOffset,
+					nodeEndPosition = userSelection.baseNode.length;
+				
+				//modify selection: select all text to the right of user caret						
+				range.setStart(cursorNode, cursorPosition)
+				range.setEnd(cursorNode, nodeEndPosition)
+
+				//if modified selection is still empty; ie the cursor is at the end of a paragraph
+				var selectionLength = range.endOffset - range.startOffset
+				if (selectionLength == 0) //cursor at end of line case
+				{	
+					var documentFragment = '&#8203';
+				}
+				else {	
+					var documentFragment = range.extractContents(),
+						documentFragment = documentFragment.textContent;
+				}
+				
+				// move selected content into block						
+				block.innerHTML = documentFragment;
+
+				//append new block
+				var selectionNode = userSelection.baseNode.parentNode;
+				$(selectionNode).after(block)
+
+
+				//recalibrate range to include the new block
+				range.setStart(userSelection.baseNode, userSelection.baseOffset); //set range from caret to end of text node
+				range.setEnd(userSelection.baseNode.parentNode.nextSibling, 0);
+				//reposition caret base on the new range
+				range.collapse(false) //send caret to end of range
+				userSelection.removeAllRanges()
+				userSelection.addRange(range) //select the range
+			}
+		}
+	}
 
 })
