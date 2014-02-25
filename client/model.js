@@ -2,7 +2,7 @@ define(function() {
 	
 	var Model = {}
 
-	function loadModel(paths, view_packageRouter) {
+	function requestModel(paths, view_packageRouter) {
 
 		$.ajax({
 			url: '/?getChildren',
@@ -10,7 +10,7 @@ define(function() {
 			dataType: "json",
 			data: JSON.stringify({parentNodes: paths}),//send as a Buffer? so node can read it
 			success: function(response) {
-				console.log(response)
+				// console.log(response)
 				
 				var model = renderModel(response);
 				view_packageRouter(model) //send the now cached Model to the view
@@ -18,6 +18,43 @@ define(function() {
 
 		})
 	}
+
+	function commitChanges(blockList, paths) {
+		console.log(blockList)
+		console.log(paths)
+
+		var	stage = [];
+
+		for (i=0; i<blockList.length;i++)
+		{
+			var obj = {},
+				block = blockList[i];
+
+			obj.id = block.getAttribute('data-id');
+			obj.content = block.innerHTML;
+			obj.sort = i+1;
+			
+			stage.push(obj)
+		}
+
+		$.ajax({
+			url: '/?commitChanges',
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify({
+				paths : paths,
+				stage: stage
+			}),
+			success: function(response) {
+				// console.log(response)
+				// $prevBlock.after(response);
+				// var element = $prevBlock.next('block').find('seed');
+
+			}
+		})
+	}
+
+
 	function renderModel(response) {
 		var blocks = response.blocks,
 			ids = response.ids,
@@ -26,34 +63,18 @@ define(function() {
 			stage = [];
 		for (i=0; i<length; i++)
 		{
-			var block =	"<block id='"+ids[i]+"'>"+blocks[i]+"</block>";
+			var block =	"<block data-id='"+ids[i]+"'>"+blocks[i]+"</block>";
 			stage.push(block)
 		}
 		Model.parent = response.parentID;
 		Model.blocks = stage;
 		return {blocks:stage, parentID: response.parentID}
 	}
-	function commitChanges(parentNodes, content) {
 
-		$.ajax({
-			url: '/?commitChanges',
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify({
-				parentNodes: parentNodes, 
-				content:content, 
-				sort:sort
-			}),
-			success: function(response) {
-				console.log(response)
-				// $prevBlock.after(response);
-				// var element = $prevBlock.next('block').find('seed');
 
-			}
-		})
-	}
+
 	return {
-		loadModel: loadModel,
+		requestModel: requestModel,
 		commitChanges: commitChanges
 
 	}

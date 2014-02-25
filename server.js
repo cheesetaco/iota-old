@@ -74,19 +74,55 @@ function requestListener(request, response) {
 	function action_commitChanges() {
 		response.writeHead(200, {"Content-Type": "text/json"})
 
+			
+
 		request.on('data', function(data) {
-			var jsonObject = JSON.parse(data),
-				parentNodes = jsonObject.parentNodes,
-				query = neo_getIDofEndNode(parentNodes),
+			var jsonObject = JSON.parse(data)
+			console.log(jsonObject)
+			// var length = stage.length;
+			// for (i=0;i<length;i++)
+			// {
+			// 	var id = stage[i].id,
+			// 		content = stage[i].content,
+			// 		sort = stage[i].sort;
 
-				content = jsonObject.content,
-				id = generateID(),
-				sort = jsonObject.sort,
-				object = {content:content, id:id, sort:sort};
+			// 	if (id == undefined)
+			// 	{
 
-			askNeo(query, neo_createBlock, object)
+			// 	}		
+			// 	//commit changes
+			// 	//changing current objects sort
+			// 	//creating new objects + sort
+			// }
+
+			// var jsonObject = JSON.parse(data),
+			// 	parentNodes = jsonObject.parentNodes,
+			// 	query = neo_getIDofEndNode(parentNodes),
+
+			// 	content = jsonObject.content,
+			// 	id = generateID(),
+			// 	sort = jsonObject.sort,
+			// 	object = {content:content, id:id, sort:sort};
+
+			// askNeo(query, neo_createBlock, object)
 		})
 	}
+
+	function neo_createBlock(result, object) {
+		var parentID = result.data[0],
+			id = object.id,
+			sort = object.sort,
+			content = object.content,
+
+		query = 'match (a:object {id:"'+parentID+'"}) create (a)-[:contains]->(b:block {id:"'+id+'",sort:'+sort+'}) return a,b';
+		console.log("create block: " + query)
+		askNeo(query)
+		
+		var query = 'INSERT INTO blocks VALUES("'+id+'", "'+content+'")';
+		// console.log("create block: " + query)
+		askSQL(query, displayBlocks)
+	}
+
 
 
 	function displayBlocks(rows, object) {
@@ -114,6 +150,9 @@ function requestListener(request, response) {
 		response.end(message)
 	}
 
+
+
+
 	function sql_getBlockContent(result, newPathID) {
 		var blockIDlist = result.data,
 			length = blockIDlist.length,
@@ -135,20 +174,7 @@ function requestListener(request, response) {
 		// console.log(sqlQuery);
 		askSQL(sqlQuery, displayBlocks, object);
 	}
-	function neo_createBlock(result, object) {
-		var parentID = result.data[0],
-			id = object.id,
-			sort = object.sort,
-			content = object.content,
 
-		query = 'match (a:object {id:"'+parentID+'"}) create (a)-[:contains]->(b:block {id:"'+id+'",sort:'+sort+'}) return a,b';
-		console.log("create block: " + query)
-		askNeo(query)
-		
-		var query = 'INSERT INTO blocks VALUES("'+id+'", "<block>'+content+'</block>")';
-		// console.log("create block: " + query)
-		askSQL(query, displayBlocks)
-	}
 	function neo_getBlocksFromID(result) {
 		var newPathID = result.data[0],
 			query = 'match (:object {id:"'+newPathID+'"})-[:contains]->(n:block) return n.id order by n.sort';

@@ -48,7 +48,8 @@ define(function() {
 	return {
 		packageRouter	: packageRouter,
 		armSeedHandlers	: armSeedHandlers,
-		globals 		: globals
+		globals 		: globals,
+		getPathTree 	: getPathTree
 	}
 })
 
