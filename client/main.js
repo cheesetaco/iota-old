@@ -103,16 +103,18 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		},
 		newlineEnter: function()
 		{
-			var block = document.createElement("block"),
+			var block = {},
+				// block = document.createElement("block"),
 				range = document.createRange(),
 				userSelection = window.getSelection(),
 				selectionStart = userSelection.baseOffset,
+				selectionEnd = userSelection.extentOffset,
 				selectionStartNode = userSelection.baseNode;
 				
 
 			//blinking cursor cases
 			if (selectionStartNode === userSelection.extentNode
-				&& selectionStart === userSelection.extentOffset)
+				&& selectionStart === selectionEnd)
 			{
 				caretCases()
 			}
@@ -132,16 +134,17 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				{
 					var documentFragment = '<br>';	
 					// move selected content into block						
-					block.innerHTML = documentFragment;
+					block.outerHTML = documentFragment;
 
 					//
 					if (cursorNode.innerHTML == '<br>')
 						var selectionNode = cursorNode;
 					else
 						var selectionNode = cursorNode.parentNode;
+					
+					block.outerHTML = "<block>"+documentFragment+"</block>";
 
-					$(selectionNode).before(block)
-
+					$(selectionNode).before(block.outerHTML)
 
 					//recalibrate range to include the new block
 					range.setEnd(cursorNode, cursorPosition);					
@@ -156,25 +159,75 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 					}
 				//cursor is in middle of paragraph
 					else
-					{	
-						var documentFragment = range.extractContents(),
-							documentFragment = documentFragment.textContent;
+					{
+						var documentFragment = cutDocumentFragment()
+
 					}
-					// move selected content into block						
-					block.innerHTML = documentFragment;
+// 					// move selected content into block						
+					block.outerHTML = "<block>"+documentFragment+"</block>";
 
-					//append new block
+// 					//append new block
 					var selectionNode = cursorNode.parentNode;
-					$(selectionNode).after(block)
+					$(selectionNode).after(block.outerHTML)
 
-					//recalibrate range to include the new block
+// 					//recalibrate range to include the new block
 					range.setEnd(cursorNode.parentNode.nextSibling, 0);	
 				}
-
 				//reposition caret based on the new range
 				range.collapse(false) //send caret to end of range
 				userSelection.removeAllRanges()
 				userSelection.addRange(range) //select the range
+
+				function cutDocumentFragment() {
+
+						var documentFragment = cursorNode.textContent.slice( cursorPosition, nodeEndPosition )
+
+						var nextNode;
+						if (cursorNode.parentNode.nodeName == 'BLOCK') 
+						{	
+							if (cursorNode.nextSibling !== null)
+								var nextNode = cursorNode.nextSibling
+						}
+						else if (cursorNode.parentNode.nodeName == 'SEED')
+						{	
+							if (cursorNode.parentNode.nextSibling !== null)
+								var nextNode = cursorNode.parentNode.nextSibling
+						}
+
+						if (nextNode !== undefined)
+							var documentFragment = crawlSiblings(nextNode, documentFragment)
+
+						return documentFragment
+				}
+
+				function crawlSiblings(focusNode, documentFragment)
+				{
+					var workingFragment = documentFragment
+					var hasSibling = true;
+
+					while(hasSibling)
+					{
+						hasSibling = false;
+
+						if (focusNode.nodeName == "SEED")
+						{
+							workingFragment += focusNode.outerHTML
+						}
+						else if (focusNode.nodeName == "#text")
+						{
+							workingFragment += focusNode.textContent
+						}
+
+						if (focusNode.nextSibling)
+						{
+							focusNode = focusNode.nextSibling;
+							hasSibling = true
+						}
+					}
+
+					return workingFragment;
+				}
+
 			}
 		}
 	}
