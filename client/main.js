@@ -63,7 +63,7 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 			}
 			else if (mode == "off")
 			{
-				view.armSeedHandlers(false);
+				view.armSeedHandlers("false");
 
 				view.globals.$editButton.attr('toggle', 'off')
 				view.globals.$editButton.css('background-color', 'green')	
@@ -104,7 +104,6 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		newlineEnter: function()
 		{
 			var block = {},
-				// block = document.createElement("block"),
 				range = document.createRange(),
 				userSelection = window.getSelection(),
 				selectionStart = userSelection.baseOffset,
@@ -116,119 +115,123 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 			if (selectionStartNode === userSelection.extentNode
 				&& selectionStart === selectionEnd)
 			{
+				var cursorPosition = selectionStart,
+					cursorNode = selectionStartNode,
+					nodeEndPosition = cursorNode.length;
+				
 				caretCases()
 			}
 
 			function caretCases() {
 
-				var cursorPosition = selectionStart,
-						cursorNode = selectionStartNode,
-						nodeEndPosition = cursorNode.length;
-
 				//modify selection: select all text to the right of user caret						
 				range.setStart(cursorNode, cursorPosition)
 				range.setEnd(cursorNode, nodeEndPosition)
 
-				//cursor is at the beginning of a paragraph
+				///cursor is at the beginning of a paragraph
 				if (cursorPosition == 0)
 				{
-					var documentFragment = '<br>';	
-					// move selected content into block						
-					block.outerHTML = documentFragment;
+					//create block
+					var documentFragment = '<br>';
+					block.outerHTML = "<block>"+documentFragment+"</block>";
 
-					//
-					if (cursorNode.innerHTML == '<br>')
+					//append new block
+					if (cursorNode.innerHTML == '<br>') // 
 						var selectionNode = cursorNode;
 					else
 						var selectionNode = cursorNode.parentNode;
-					
-					block.outerHTML = "<block>"+documentFragment+"</block>";
-
 					$(selectionNode).before(block.outerHTML)
 
 					//recalibrate range to include the new block
-					range.setEnd(cursorNode, cursorPosition);					
+					range.setEnd(cursorNode, cursorPosition);
 				}
 				else
 				{
+					//create block
+				/// cursor is at the end of a paragraph
 					var selectionLength = range.endOffset - range.startOffset
-				//cursor is at the end of a paragraph
-					if (selectionLength == 0)
-					{	
+					if (selectionLength == 0) 
 						var documentFragment = '<br>';
-					}
-				//cursor is in middle of paragraph
-					else
-					{
-						var documentFragment = cutDocumentFragment()
-
-					}
-// 					// move selected content into block						
+				/// cursor is in middle of paragraph
+					else 
+						var documentFragment = cutDocumentFragment()		
 					block.outerHTML = "<block>"+documentFragment+"</block>";
 
-// 					//append new block
+					//append new block
 					var selectionNode = cursorNode.parentNode;
 					$(selectionNode).after(block.outerHTML)
 
-// 					//recalibrate range to include the new block
+					//recalibrate range to include the new block
 					range.setEnd(cursorNode.parentNode.nextSibling, 0);	
 				}
+
 				//reposition caret based on the new range
 				range.collapse(false) //send caret to end of range
 				userSelection.removeAllRanges()
 				userSelection.addRange(range) //select the range
+			}
 
-				function cutDocumentFragment() {
+			function cutDocumentFragment() {
 
-						var documentFragment = cursorNode.textContent.slice( cursorPosition, nodeEndPosition )
+				//grab the remainder of the paragraph following the cursor
+				var	documentFragment = cursorNode.textContent.slice( cursorPosition, nodeEndPosition ),
+					startSlice 	= 0,
+					endSlice 	= cursorPosition;
+				cursorNode.textContent = cursorNode.textContent.slice(0,endSlice)
 
-						var nextNode;
-						if (cursorNode.parentNode.nodeName == 'BLOCK') 
-						{	
-							if (cursorNode.nextSibling !== null)
-								var nextNode = cursorNode.nextSibling
-						}
-						else if (cursorNode.parentNode.nodeName == 'SEED')
-						{	
-							if (cursorNode.parentNode.nextSibling !== null)
-								var nextNode = cursorNode.parentNode.nextSibling
-						}
-
-						if (nextNode !== undefined)
-							var documentFragment = crawlSiblings(nextNode, documentFragment)
-
-						return documentFragment
+				//is there a sibling?
+				var nextNode;
+				if (cursorNode.parentNode.nodeName == 'BLOCK') 
+				{	
+					if (cursorNode.nextSibling !== null)
+						var nextNode = cursorNode.nextSibling
+				}
+				else if (cursorNode.parentNode.nodeName == 'SEED')
+				{	
+					if (cursorNode.parentNode.nextSibling !== null)
+						var nextNode = cursorNode.parentNode.nextSibling
 				}
 
-				function crawlSiblings(focusNode, documentFragment)
+				//go get the siblings
+				if (nextNode !== undefined)
+					var documentFragment = crawlSiblings(nextNode, documentFragment)
+
+				return documentFragment
+			}
+
+			function crawlSiblings(focusNode, documentFragment)
+			{
+				var workingFragment = documentFragment
+				var hasSibling = true;
+
+				while(hasSibling)
 				{
-					var workingFragment = documentFragment
-					var hasSibling = true;
+					hasSibling = false;
 
-					while(hasSibling)
+					//grab the html from the sibling, also remove those contents from the previous paragraph
+					if (focusNode.nodeName == "SEED")
 					{
-						hasSibling = false;
-
-						if (focusNode.nodeName == "SEED")
-						{
-							workingFragment += focusNode.outerHTML
-						}
-						else if (focusNode.nodeName == "#text")
-						{
-							workingFragment += focusNode.textContent
-						}
-
-						if (focusNode.nextSibling)
-						{
-							focusNode = focusNode.nextSibling;
-							hasSibling = true
-						}
+						workingFragment += focusNode.outerHTML
+						focusNode.parentNode.removeChild(focusNode) 
+					}
+					else if (focusNode.nodeName == "#text")
+					{
+						workingFragment += focusNode.textContent
+						focusNode.parentNode.removeChild(focusNode)						
 					}
 
-					return workingFragment;
+					//is there another sibling?
+					if (focusNode.nextSibling)
+					{
+						focusNode = focusNode.nextSibling;
+						hasSibling = true
+					}
 				}
 
+				//send the final contents back to be injected
+				return workingFragment;
 			}
+
 		}
 	}
 

@@ -14,12 +14,13 @@ define(function() {
 	function renderModel(model) {
 		globals.$contentContainer.append(model.blocks);
 
-		armSeedHandlers();
+		armSeedHandlers(true);
 	}
 	function armSeedHandlers(bool) {
-		var bool = typeof bool !== undefined ? bool : true,
-			$seed = $('seed');
-		if (bool = true)
+		// var bool = typeof bool !== undefined ? bool : true,
+		var	$seed = $('seed');
+		console.log($seed)
+		if (bool == true)
 		{
 			$seed.on('click.seed', function(event) {
 				var	pathTree = getPathTree(),
@@ -30,8 +31,9 @@ define(function() {
 				else
 					location.pathname = pathSeed;
 			})
+
 		}
-		else if (bool = false)
+		else if (bool = "false")
 			$seed.unbind('click.seed')
 
 	}
