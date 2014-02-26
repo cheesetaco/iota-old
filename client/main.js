@@ -94,13 +94,12 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		},
 		newlineEnter: function()
 		{
-			var block = {},
+			var block = document.createElement("block"),
 				range = document.createRange(),
 				userSelection = window.getSelection(),
 				selectionStart = userSelection.baseOffset,
 				selectionEnd = userSelection.extentOffset,
 				selectionStartNode = userSelection.baseNode;
-				
 
 			//blinking cursor cases
 			if (selectionStartNode === userSelection.extentNode
@@ -119,42 +118,45 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				range.setStart(cursorNode, cursorPosition)
 				range.setEnd(cursorNode, nodeEndPosition)
 
-				///cursor is at the beginning of a paragraph
+				///cursor is at the beginning of a paragraph {grab everything and prepend a br block}
 				if (cursorPosition == 0)
 				{
 					//create block
 					var documentFragment = '<br>';
-					block.outerHTML = "<block>"+documentFragment+"</block>";
+					block.innerHTML = documentFragment;
 
 					//append new block
 					if (cursorNode.innerHTML == '<br>') // 
 						var selectionNode = cursorNode;
 					else
 						var selectionNode = cursorNode.parentNode;
-					$(selectionNode).before(block.outerHTML)
+					$(selectionNode).before(block)
 
 					//recalibrate range to include the new block
 					range.setEnd(cursorNode, cursorPosition);
 				}
 				else
 				{
-					//create block
 				/// cursor is at the end of a paragraph
-					var selectionLength = range.endOffset - range.startOffset
-					if (selectionLength == 0) 
-						var documentFragment = '<br>';
-				/// cursor is in middle of paragraph
-					else 
-						var documentFragment = cutDocumentFragment()		
+					var lengthFromEnd = range.endOffset - range.startOffset
+					if (lengthFromEnd == 0) 
+					{
+						var nextNode = checkForSibling();
 					
-					//catch nbsp
-					if (documentFragment.charAt(0) == " ")
-						documentFragment = "&nbsp;" + documentFragment.substr(1)
+						if(nextNode !== undefined) //cursor isn't at the end of paragraph
+							var documentFragment = getTextToRightOfCaret()
+						else
+							var documentFragment = "<br>"
+					}
 
-					block.outerHTML = "<block>"+documentFragment+"</block>";
+				/// cursor is in middle of paragraph
+					else
+						var documentFragment = getTextToRightOfCaret()		
+
+					block.innerHTML = documentFragment;
 					//append new block
 					var selectionNode = cursorNode.parentNode;
-					$(selectionNode).after(block.outerHTML)
+					$(selectionNode).after(block)
 
 					//recalibrate range to include the new block
 					range.setEnd(cursorNode.parentNode.nextSibling, 0);	
@@ -166,7 +168,7 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				userSelection.addRange(range) //select the range
 			}
 
-			function cutDocumentFragment() {
+			function getTextToRightOfCaret() {
 
 				//grab the remainder of the paragraph following the cursor
 				var	documentFragment = cursorNode.textContent.slice( cursorPosition, nodeEndPosition ),
@@ -174,24 +176,31 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 					endSlice 	= cursorPosition;
 				cursorNode.textContent = cursorNode.textContent.slice(0,endSlice)
 
-				//is there a sibling?
+				var nextNode = checkForSibling();
+				//yes? crawl siblings
+				if (nextNode !== undefined)
+					var documentFragment = crawlSiblings(nextNode, documentFragment)
+
+				//catch and replace whitespace
+				if (documentFragment.charAt(0) == " ")
+					documentFragment = "&nbsp;" + documentFragment.substr(1)
+				
+				return documentFragment
+			}
+			function checkForSibling() {
 				var nextNode;
 				if (cursorNode.parentNode.nodeName == 'BLOCK') 
 				{	
 					if (cursorNode.nextSibling !== null)
-						var nextNode = cursorNode.nextSibling
+						nextNode = cursorNode.nextSibling
 				}
 				else if (cursorNode.parentNode.nodeName == 'SEED')
 				{	
 					if (cursorNode.parentNode.nextSibling !== null)
-						var nextNode = cursorNode.parentNode.nextSibling
+						nextNode = cursorNode.parentNode.nextSibling
 				}
 
-				//go get the siblings
-				if (nextNode !== undefined)
-					var documentFragment = crawlSiblings(nextNode, documentFragment)
-
-				return documentFragment
+				return nextNode
 			}
 
 			function crawlSiblings(focusNode, documentFragment)
