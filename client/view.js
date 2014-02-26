@@ -5,11 +5,11 @@ define(function() {
 		$commitButton : $('div#edit div#commitChanges')
 	}
 
-	function packageRouter(packageType) {
-		if (packageType==404)
+	function packageRouter(model) {
+		if (model==404)
 			console.log('wrongobongos')
 		else
-			renderModel(packageType)
+			renderModel(model)
 	}
 	function renderModel(model) {
 		globals.$contentContainer.append(model.blocks);
@@ -19,7 +19,7 @@ define(function() {
 	function armSeedHandlers(bool) {
 		// var bool = typeof bool !== undefined ? bool : true,
 		var	$seed = $('seed');
-		console.log($seed)
+
 		if (bool == true)
 		{
 			$seed.on('click.seed', function(event) {
@@ -41,8 +41,11 @@ define(function() {
 	function getPathTree() {
 		var pathTree = location.pathname;
 
-		if (pathTree[pathTree.length-1] == "/") //if theres a "/" at the end of the url
-			pathTree = pathTree.slice(0, -1);
+		var	arr = pathTree.split('/'),
+			pathTree = arr.splice(1,arr.length); //remove first
+		
+		if (pathTree[pathTree.length-1] == "") // if location had a trailing "/"
+			pathTree.pop(); 
 
 		return pathTree
 	}

@@ -27,16 +27,11 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 
 		if (pathname !== "/") //check if we're at index.html, if not send the last id in the url
 		{
-			//clean up array
-			var	arr = pathname.split('/'),
-				paths = arr.splice(1,arr.length); //remove blank array item
-			
-			if (pathname[pathname.length-1] == "/")
-				paths.pop(); //remove blank array item
+			var paths = view.getPathTree()
 
 			model.requestModel(paths, view_packageRouter) //send the location data to the model
 		}
-		else //if index.html was directly requested
+		else //root location
 		{
 			var path = ["home"];
 			model.requestModel(path, view_packageRouter)
@@ -59,7 +54,14 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 
 				this.startupTextEditor();
 
-				this.armCommitButton();
+				//arm commit button
+				view.globals.$commitButton.on('click.commit', function() {
+				var blockList = view.globals.$contentContainer.children('block'),
+					paths = view.getPathTree();
+
+				model.commitChanges(blockList, paths)
+			})
+
 			}
 			else if (mode == "off")
 			{
@@ -70,7 +72,9 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				view.globals.$contentContainer.removeAttr('contenteditable');
 
 				this.shutdownTextEditor();
-				this.disarmCommitButtion();
+				//disarm commitButton
+				view.globals.$commitButton.off('click.commit')
+
 			}
 		},
 		startupTextEditor: function() 
@@ -87,19 +91,6 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		shutdownTextEditor: function() 
 		{
 			view.globals.$contentContainer.off("keydown.enter")
-		},
-		armCommitButton: function() 
-		{
-			view.globals.$commitButton.on('click.commit', function() {
-				var blockList = view.globals.$contentContainer.children('block'),
-					paths = view.getPathTree();
-
-				model.commitChanges(blockList, paths)
-			})
-		},
-		disarmCommitButtion: function() 
-		{
-			view.globals.$commitButton.off('click.commit')
 		},
 		newlineEnter: function()
 		{
@@ -155,8 +146,12 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				/// cursor is in middle of paragraph
 					else 
 						var documentFragment = cutDocumentFragment()		
-					block.outerHTML = "<block>"+documentFragment+"</block>";
+					
+					//catch nbsp
+					if (documentFragment.charAt(0) == " ")
+						documentFragment = "&nbsp;" + documentFragment.substr(1)
 
+					block.outerHTML = "<block>"+documentFragment+"</block>";
 					//append new block
 					var selectionNode = cursorNode.parentNode;
 					$(selectionNode).after(block.outerHTML)

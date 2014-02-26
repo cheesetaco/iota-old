@@ -78,26 +78,40 @@ function requestListener(request, response) {
 
 		request.on('data', function(data) {
 			var jsonObject = JSON.parse(data)
-			console.log(jsonObject)
-			// var length = stage.length;
-			// for (i=0;i<length;i++)
-			// {
-			// 	var id = stage[i].id,
-			// 		content = stage[i].content,
-			// 		sort = stage[i].sort;
 
-			// 	if (id == undefined)
-			// 	{
+			var paths = jsonObject.paths;
 
-			// 	}		
-			// 	//commit changes
-			// 	//changing current objects sort
-			// 	//creating new objects + sort
-			// }
+
+			var	query = neo_getIDofEndNode(paths);
+console.log(query)
+			var stage = jsonObject.stage;
+			var length = stage.length;
+
+			var queryChangeNodes = [],
+				queryCreateNodes = [];
+
+			for (i=0;i<length;i++)
+			{
+				var id = stage[i].id,
+					content = stage[i].content,
+					sort = stage[i].sort;
+
+				if (id == undefined)
+				{
+					queryCreateNodes.push(stage[i])
+
+				}
+				else
+				{
+					queryChangeNodes.push(stage[i])
+				}
+			}
+			// console.log(queryChangeNodes)
+			// console.log(queryCreateNodes)
+
 
 			// var jsonObject = JSON.parse(data),
 			// 	parentNodes = jsonObject.parentNodes,
-			// 	query = neo_getIDofEndNode(parentNodes),
 
 			// 	content = jsonObject.content,
 			// 	id = generateID(),
@@ -211,7 +225,7 @@ function requestListener(request, response) {
 		db.cypherQuery(query, function(err, result) {
 			if(err) throw err;
 			
-			console.log(result);
+			// console.log(result);
 
 			if (result.data[0]!==undefined && callback)
 				callback(result, object)

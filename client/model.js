@@ -1,8 +1,21 @@
 define(function() {
 	
+	function packageRouter(gift, callback) {
+		var model;
+		if (gift==404)
+			model = 404
+		else
+		{
+			model = renderModel(gift)
+
+		}
+			callback(model)	
+	}
+
 	var Model = {}
 
-	function requestModel(paths, view_packageRouter) {
+
+	function requestModel(paths, callback) {
 
 		$.ajax({
 			url: '/?getChildren',
@@ -11,9 +24,8 @@ define(function() {
 			data: JSON.stringify({parentNodes: paths}),//send as a Buffer? so node can read it
 			success: function(response) {
 				// console.log(response)
-				
-				var model = renderModel(response);
-				view_packageRouter(model) //send the now cached Model to the view
+				var gift = response
+				packageRouter(gift, callback) //send the now cached Model to the view
 			}
 
 		})
@@ -55,7 +67,10 @@ define(function() {
 	}
 
 
+
+
 	function renderModel(response) {
+		console.log(response)
 		var blocks = response.blocks,
 			ids = response.ids,
 			length = ids.length,
