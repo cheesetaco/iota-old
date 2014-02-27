@@ -74,53 +74,61 @@ function requestListener(request, response) {
 	function action_commitChanges() {
 		response.writeHead(200, {"Content-Type": "text/json"})
 
-			
+//update blocks
+//delete missing blocks
+//create new blocks		
 
 		request.on('data', function(data) {
-			var jsonObject = JSON.parse(data)
+			var jsonObject = JSON.parse(data),
 
-			var paths = jsonObject.paths;
+				paths = jsonObject.paths,
+				query = neo_getIDofEndNode(paths);
 
+			var blockSet = jsonObject.stage;
 
-			var	query = neo_getIDofEndNode(paths);
-console.log(query)
-			var stage = jsonObject.stage;
-			var length = stage.length;
+			askNeo(query,iterateUpdateBlocks,blockSet)
 
-			var queryChangeNodes = [],
-				queryCreateNodes = [];
-
-			for (i=0;i<length;i++)
-			{
-				var id = stage[i].id,
-					content = stage[i].content,
-					sort = stage[i].sort;
-
-				if (id == undefined)
-				{
-					queryCreateNodes.push(stage[i])
-
-				}
-				else
-				{
-					queryChangeNodes.push(stage[i])
-				}
-			}
-			// console.log(queryChangeNodes)
-			// console.log(queryCreateNodes)
-
-
-			// var jsonObject = JSON.parse(data),
-			// 	parentNodes = jsonObject.parentNodes,
-
-			// 	content = jsonObject.content,
-			// 	id = generateID(),
-			// 	sort = jsonObject.sort,
-			// 	object = {content:content, id:id, sort:sort};
-
-			// askNeo(query, neo_createBlock, object)
 		})
 	}
+	var globals = {
+		iteration: undefined,
+		ownerID: undefined
+	}
+	function iterateUpdateBlocks(result, blockSet) {
+		//init
+		if (globals.iteration == undefined)
+		{
+			globals.ownerID 	= result.data[0]
+			globals.iteration 	= 0
+		}
+
+		//generate queries
+		var i 		= globals.iteration,		
+			length 	= blockSet.length,
+			content = escapeSpecialCharacters(blockSet[i].content),
+			id 		= blockSet[i].id,
+			query 	= "UPDATE blocks SET content='" +content+ 
+						"' WHERE id='" +id+ "'";
+console.log(query)
+		//loop queries
+		globals.iteration++
+
+		if (globals.iteration < length)
+			// callback(query,iterateUpdateBlocks,blockSet)
+			askSQL(query, iterateUpdateBlocks, blockSet)
+		
+		else if (globals.iteration == length)
+			askSQL(query)
+
+	}
+
+
+	function callback(query, callback, object) {
+		var rows = "garbage";
+		callback(rows, object)
+	}
+
+
 
 	function neo_createBlock(result, object) {
 		var parentID = result.data[0],
@@ -134,7 +142,7 @@ console.log(query)
 		
 		var query = 'INSERT INTO blocks VALUES("'+id+'", "'+content+'")';
 		// console.log("create block: " + query)
-		askSQL(query, displayBlocks)
+		// askSQL(query, this, displayBlocks)
 	}
 
 
@@ -302,4 +310,29 @@ function generateID() {
 		ID += list[rand]
 	}
 	return ID;
+}
+function escapeSpecialCharacters(string) {
+
+	var special = ["'", '"'];
+
+	for (i=0; i<special.length;i++)
+	{
+		var escaped = "\\"+special[i],
+			index = string.indexOf(special[i]);
+	//ham'ham'
+		while ( index != -1 ) {
+			// var	esc = /\\/,
+			// 	alreadyEscaped = esc.test( string.substr(index-1,index-1) );
+
+				console.log("index: "+index)
+				console.log("string: "+string)			
+			// if (alreadyEscaped == false)
+			// {
+				string = string.substr(0, index) + escaped + string.substr(index+escaped.length-1);		
+				index = string.indexOf( special[i] , index + escaped.length );
+			// }
+		}
+	}
+
+	return string
 }
