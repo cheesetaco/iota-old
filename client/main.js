@@ -56,11 +56,11 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 
 				//arm commit button
 				view.globals.$commitButton.on('click.commit', function() {
-				var blockList = view.globals.$contentContainer.children('block'),
-					paths = view.getPathTree();
+					var blockList = view.globals.$contentContainer.children('block'),
+						paths = view.getPathTree();
 
-				model.commitChanges(blockList, paths)
-			})
+					model.commitChanges(blockList, paths)
+				})
 
 			}
 			else if (mode == "off")
@@ -98,6 +98,11 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 					e.preventDefault();
 
 					that.newlineEnter();
+				}
+				else if (e.which == 8)
+				{
+					// if ($('div#content').children().length == 0)
+						// console.log('nope')
 				}
 			});
 		},

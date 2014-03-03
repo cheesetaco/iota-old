@@ -73,14 +73,19 @@ function requestListener(request, response) {
 	}
 
 
-
+	///////////////////////// master equation /////////////////////
 	function action_commitChanges() {
 		response.writeHead(200, {"Content-Type": "text/json"})
 
 		request.on('data', function(data) {
-			var jsonObject = JSON.parse(data),
+			var jsonObject = JSON.parse(data);
 
-				paths = jsonObject.paths,
+			if (jsonObject.stage.length == 0)
+			{
+				jsonObject.stage.push({ id: null, content: '<br>', sort: 1 })
+			}
+
+			var	paths = jsonObject.paths,
 				query = neo_getIDofEndNode(paths);
 
 			var blockSet = jsonObject.stage;
@@ -90,14 +95,15 @@ function requestListener(request, response) {
 			/////////////////////////////////////////////
 
 			// update old blocks and insert new blocks
-			// askNeo(query, commitLoop, blockSet)
+			askNeo(query, commitLoop, blockSet)
 
 			//delete old blocks
-
 			askNeo(query, sortDeleteTypesForWriting, jsonObject)
 
 		})
 	}
+	////////////////////////////////////////////////////////////////
+
 	function sortDeleteTypesForWriting(results, jsonObject) {
 		var oldModel = jsonObject.model,
 			newModel = jsonObject.stage;
@@ -130,12 +136,13 @@ function requestListener(request, response) {
 			var chunk = "'" +deleteList[i]+ "', "
 			query += chunk
 		}
-		if (query !== "DELETE FROM blocks WHERE IN (" )
+		if (query !== "DELETE FROM blocks WHERE id IN (" )
 		{
 			query = removeLastComma(query);
 			query += ")";
 			
 			askSQL(query)
+			// console.log(query)
 		}
 
 	}
@@ -167,9 +174,16 @@ function requestListener(request, response) {
 			var query 	= queryStart +queryEnd
 			
 			askNeo(query)
+			// console.log(query)
 		}
 	}
+
+
+
+
+
 	function commitLoop(result, blockSet) {
+		console.log(blockSet)
 		var	parentID 	= result.data[0],
 			
 			neo_match 	= "match (parent:object {id:'" +parentID+ "'}), ",
@@ -184,11 +198,14 @@ function requestListener(request, response) {
 		//construct queries
 		for (i=0;i<blockSet.length;i++)
 		{
-			if (blockSet[i].id == null)
+			if (blockSet[i].id == null) {
 				var generatedID = generateID();
-
-			var sql_chunks 	= sql_commit(blockSet, i, generatedID);
-				neo_chunks	= neo_commit(blockSet, i, generatedID);
+				var neo_chunks	= neo_commit(blockSet, i, generatedID);				
+			}
+			else
+				var neo_chunks	= neo_commit(blockSet, i)
+			
+			var sql_chunks 		= sql_commit(blockSet, i, generatedID);
 			
 			neo_match 	+= neo_chunks.match
 			neo_create 	+= neo_chunks.create
@@ -221,19 +238,36 @@ function requestListener(request, response) {
 
 		askNeo(neo_query)
 
-
 		if (sql_deleted == true)
 			askSQL(sql_delete, sql_again, sql_insert)
 		else
 			askSQL(sql_insert)
 
+		// testQueries(neo_query)
+
+		// if (sql_deleted == true)
+		// 	testQueries(sql_delete, sql_again, sql_insert)
+		// else
+		// 	testQueries(sql_insert)
 	
 		// console.log(sql_delete)
 		// console.log(sql_insert)
 		// console.log(neo_query)
 	}
 
+	function testQueries(query, callback, object) {
+		console.log(query)
+
+		var result = "meh"
+			if (callback)
+				callback(result, object)
+			else
+				display404Page();
+	}
+
 	function sql_again(rows, query) {
+console.log(query)
+
 		var connection = mysql.createConnection({
 			host     : 'localhost',
 			user     : 'rooster',
@@ -297,23 +331,6 @@ function requestListener(request, response) {
 	}
 
 
-
-
-
-	function neo_createBlock(result, object) {
-		var parentID = result.data[0],
-			id = object.id,
-			sort = object.sort,
-			content = object.content,
-
-		query = 'match (a:object {id:"'+parentID+'"}) create (a)-[:contains]->(b:block {id:"'+id+'",sort:'+sort+'}) return a,b';
-		console.log("create block: " + query)
-		askNeo(query)
-		
-		var query = 'INSERT INTO blocks VALUES("'+id+'", "'+content+'")';
-		// console.log("create block: " + query)
-		// askSQL(query, this, displayBlocks)
-	}
 
 
 
