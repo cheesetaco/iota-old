@@ -23,7 +23,7 @@ function requestListener(request, response) {
 			// getChildren = new RegExp("/getChildren\\??.*"),
 			getChildren = location.match(/\/\?getChildren\??.*/),
 			commitChanges = location.match(/\/\?commitChanges/),
-			allroutes	= /(.*\/)*/;
+			allroutes= /(.*\/)*/;
 
 		if (getChildren)
 		{	console.log("ajax: "+location)
@@ -67,10 +67,11 @@ function requestListener(request, response) {
 				parentNodes = jsonObject.parentNodes,
 				query = neo_getIDofEndNode(parentNodes);
 
-			// console.log(query)
+			console.log(query)
 			askNeo(query, neo_getBlocksFromID);
 		})
 	}
+
 
 
 
@@ -85,119 +86,63 @@ function requestListener(request, response) {
 
 			var blockSet = jsonObject.stage;
 
-			/////////////////////////////////////////////
-			// API updateDatabases(oldModel, newModel) //
-			/////////////////////////////////////////////
-
-			// update old blocks and insert new blocks
 			askNeo(query, commitLoop, blockSet)
-
-			//delete old blocks
-			console.log(jsonObject)
 		})
 	}
 
-	function sql_delete() {
-
-	}
-	function neo_delete() {
-
-	}
 	function commitLoop(result, blockSet) {
 		var	parentID 	= result.data[0],
-			
 			neo_match 	= "match (parent:object {id:'" +parentID+ "'}), ",
 			neo_create 	= "create ",
 			neo_created = false,
 			neo_sort 	= "set ",
-			
-			sql_deleted = false,
-			sql_delete	= "DELETE FROM blocks WHERE id IN (",
-			sql_insert  = "INSERT INTO blocks VALUES ";
+			sql_query	= "";
 
-		//construct queries
 		for (i=0;i<blockSet.length;i++)
-		{
+		{	
 			if (blockSet[i].id == null)
 				var generatedID = generateID();
 
-			var sql_chunks 	= sql_commit(blockSet, i, generatedID);
+			var sql_chunk 	= sql_commit(blockSet, i, generatedID);
 				neo_chunks	= neo_commit(blockSet, i, generatedID);
 			
+			sql_query 	+= sql_chunk
 			neo_match 	+= neo_chunks.match
 			neo_create 	+= neo_chunks.create
 			neo_sort 	+= neo_chunks.sort
 
-			sql_delete 	+= sql_chunks.remove
-			sql_insert 	+= sql_chunks.insert
-
 			if (neo_chunks.create.length > 0)
 				neo_created = true
-			if (sql_chunks.remove.length >0)
-				sql_deleted = true
 		}
 		var removeLastComma = function(string) {
 			var length = string.length,
 				str = string.substring(0,length-2);
 			str += " "
 			return str
-		};
-		neo_match 	= removeLastComma(neo_match)
-		neo_create 	= removeLastComma(neo_create)
-		neo_sort 	= removeLastComma(neo_sort)
-
-		sql_insert 	= removeLastComma(sql_insert)
-		sql_delete 	= removeLastComma(sql_delete)
-		sql_delete += ")"
-
-		//final queries
-		var neo_query;
+		},
+			neo_match = removeLastComma(neo_match),
+			neo_create = removeLastComma(neo_create),
+			neo_sort = removeLastComma(neo_sort);
 
 		if (neo_created == true)
-			neo_query = neo_match + neo_create + neo_sort
+			var neo_query = neo_match + neo_create + neo_sort
 		else
-			neo_query = neo_match + neo_sort
+			var neo_query = neo_match + neo_sort
 
-		askNeo(neo_query)
-
-
-		if (sql_deleted == true)
-			askSQL(sql_delete, sql_again, sql_insert)
-		else
-			askSQL(sql_insert)
-
-	
-		// console.log(sql_delete)
-		// console.log(sql_insert)
-		// console.log(neo_query)
+		console.log(sql_query)
+		console.log(neo_query)
+		// askNeo(neo_query)
+		// askSQL(sql_query)
 	}
-
-	function sql_again(rows, query) {
-		var connection = mysql.createConnection({
-			host     : 'localhost',
-			user     : 'rooster',
-			password : 'froffles23',
-			database : 'iota',
-		});
-
-		rows ="";
-
-		connection.query(query, function (err, rows, fields) 
-		{
-			if (err) throw err;
-
-			return rows
-		});
-	}	
 	function neo_commit(blockSet, i, generatedID) {
 		var neo_chunks = {
 			match: "",
 			create: "",
 			sort: ""
 		}
-		// console.log(blockSet)
+
 		var id = blockSet[i].id;
-		// console.log(id)
+
 		var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
 			char = char.split(""),
 			sort = i+1;
@@ -213,29 +158,159 @@ function requestListener(request, response) {
 	}
 
 	function sql_commit(blockSet, i, generatedID) {
-		var sql_chunks = {
-			remove: "",
-			insert: ""
-		};
+		var sql_chunk = "";
 
-		var content = escapeSpecialCharacters(blockSet[i].content)
+		var content = blockSet[i].content
 
 		//update cases
 		if (blockSet[i].id)
 		{
 			var	id = blockSet[i].id;
-			sql_chunks.remove = "'"+id+"', "
-			sql_chunks.insert = "('" +id+ "','" +content+ "'), ";
+			sql_chunk = "UPDATE blocks SET content='" +content+ "' WHERE id='" +id+ "'; ";
 		}
-		else {
-			var id = generatedID;
-			sql_chunks.insert = "('" +id+ "','" +content+ "'), ";
+		else if (generatedID)
+		{
+			sql_chunk = "INSERT INTO blocks VALUES('" +generatedID+ "','" +content+ "'); ";
 		}
 
-		return sql_chunks
+		return sql_chunk
 	}
 
 
+
+
+
+
+
+
+
+
+
+
+	// function action_commitChanges() {
+	// 	response.writeHead(200, {"Content-Type": "text/json"})
+
+	// 	request.on('data', function(data) {
+	// 		var jsonObject = JSON.parse(data),
+
+	// 			paths = jsonObject.paths,
+	// 			query = neo_getIDofEndNode(paths);
+
+	// 		var blockSet = jsonObject.stage;
+
+	// 		askNeo(query,commitBlocks,blockSet)
+	// 	})
+	// }
+
+	// var globals = {
+	// 	iteration: undefined,
+	// 	ownerID: undefined,
+	// 	neoQueryMatch : "match ",
+	// 	neoQueryCreate : "create ",
+	// 	neoQuerySort : "set ",
+	// 	newBlocksToCommit : false
+	// }
+	// function commitBlocks(result, blockSet) {
+	// 	//init
+	// 	if (globals.iteration == undefined)
+	// 	{
+	// 		globals.ownerID 	= result.data[0]
+	// 		globals.iteration 	= 0
+	// 		globals.neoQueryMatch += "(a:object {id:'"+result.data[0]+"'}), "
+	// 	}
+
+	// 	//setup SQL query
+	// 	var i 		= globals.iteration,		
+	// 		length 	= blockSet.length,
+	// 		content = escapeSpecialCharacters(blockSet[i].content),
+	// 		sort 	= blockSet[i].sort;
+
+	
+	// 	var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	// 		char = char.split("");
+
+	// 	if (blockSet[i].id)//update changed blocks
+	// 	{
+	// 		var	id 		= blockSet[i].id,
+	// 			query 	= "UPDATE blocks SET content='" +content+ 
+	// 						"' WHERE id='" +id+ "'";
+	// 	}
+	// 	else if (blockSet[i].id == undefined)//create new blocks
+	// 	{
+	// 		var id = generateID(),
+	// 			query = "INSERT INTO blocks VALUES('"+id+"','"+content+"')";
+
+	// 		//neo
+	// 		globals.newBlocksToCommit = true;
+	// 		if (globals.iteration < length)
+	// 		{		
+	// 			globals.neoQueryCreate += "(a)-[:contains]->("+char[i+1]+
+	// 				":block {id:'"+id+"'}), "
+	// 		}
+	// 		else
+	// 		{
+	// 			globals.neoQueryCreate += "(a)-[:contains]->("+char[i+1]+
+	// 				":block {id:'"+id+"'}) "
+	// 		}
+			
+	// 		// console.log(query)
+	// 	}
+
+
+	// 	//loop queries
+	// 	globals.iteration++
+		
+	// 	//setup neo query
+
+	// 	var	i 	 = globals.iteration; 
+				
+	// 	//update SQL content
+	// 	if (globals.iteration < length)
+	// 	{
+	// 		// callback(query,commitBlocks,blockSet)
+
+	// 		askSQL(query, commitBlocks, blockSet)
+
+	// 		globals.neoQueryMatch += "("+char[i]+":block {id:'"+id+"'}), ";
+	// 		globals.neoQuerySort += char[i]+".sort="+globals.iteration+", ";
+
+	// 	}
+	// 	else if (globals.iteration == length)
+	// 	{
+	// 		// askSQL(query)
+
+	// 		globals.neoQueryMatch += "("+char[i]+":block {id:'"+id+"'}) ";
+	// 		globals.neoQuerySort += char[i]+".sort="+globals.iteration;			
+	// 		if (globals.newBlocksToCommit)
+	// 		{
+	// 			var neoQuery = globals.neoQueryMatch + globals.neoQueryCreate + globals.neoQuerySort;
+	// 		}
+	// 		else {
+	// 			var neoQuery = globals.neoQueryMatch + globals.neoQuerySort;
+
+	// 		}
+	// 		console.log(neoQuery)
+	// 		// askNeo(neoQueryMatch)
+	// 	}
+
+
+	// }
+
+
+
+
+
+
+
+
+
+//delete missing blocks
+	// function runUpdate
+
+	function callback(query, callback, object) {
+		var rows = "garbage";
+		callback(rows, object)
+	}
 
 
 
@@ -259,27 +334,16 @@ function requestListener(request, response) {
 	function displayBlocks(rows, object) {
 		var blocksArray = [];
 
-		var sqlIDList = [];
-		for (i=0;i<rows.length;i++)
+		for(i=0;i<rows.length;i++)
 		{
-			var sqlID = rows[i].id
-			sqlIDList.push(sqlID)
-		}
+			var block = rows[i].content.toString();
 
-
-		//display in the right order -- fucking sql
-		var	realIDlist = object.blockIDlist;
-
-		for (j=0;j<realIDlist.length;j++)
-		{
-			var num = sqlIDList.indexOf(realIDlist[j]),
-				realContent = rows[num].content; 
-			blocksArray.push(realContent)
-		}
+			blocksArray.push(block);
+		};
 
 		var sendList = JSON.stringify({
 			blocks 	: 	blocksArray,
-			ids 	: 	realIDlist,
+			ids 	: 	object.blockIDlist,
 			parentID: 	object.newPathID
 		});
 
@@ -296,13 +360,10 @@ function requestListener(request, response) {
 
 
 	function sql_getBlockContent(result, newPathID) {
-
 		var blockIDlist = result.data,
 			length = blockIDlist.length,
 			sqlQuery = 'SELECT * FROM blocks WHERE id in (';
-			blockIDorder = [];
-
-
+		
 		if (length > 1) {
 			for (i=0;i<length;i++) 
 			{
@@ -310,15 +371,12 @@ function requestListener(request, response) {
 					sqlQuery += '"'+blockIDlist[i]+'",'
 				else 
 					sqlQuery += '"'+blockIDlist[i]+'")'
-			
-				blockIDorder.push({"id":blockIDlist[i], "sort": i+1})
 			}
 		}
 		else if (length == 1)
 			sqlQuery = 'SELECT * FROM blocks WHERE id='+'"'+blockIDlist[0]+'"'
 
-
-		var object = {blockIDlist:blockIDlist, newPathID: newPathID, blockIDorder: blockIDorder}
+		var object = {blockIDlist:blockIDlist, newPathID: newPathID}
 		// console.log(sqlQuery);
 		askSQL(sqlQuery, displayBlocks, object);
 	}

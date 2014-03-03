@@ -80,10 +80,23 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		startupTextEditor: function() 
 		{
 			var that = this;
-			view.globals.$contentContainer.on("keydown.enter", function(e){
+
+			//if the content div is empty, create new children blocks
+			var divContent = document.getElementById('content'),
+				block = document.createElement("block");
+			block.innerHTML = "<br>";
+			if (divContent.getElementsByTagName("block").length == 0) //no block
+			{
+				console.log('ham')
+				divContent.appendChild(block)
+			}
+
+			view.globals.$contentContainer.on("keydown.enter", function(e)
+			{
 				//handle enter key
 				if (e.which == 13) {
 					e.preventDefault();
+
 					that.newlineEnter();
 				}
 			});
@@ -123,14 +136,16 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				{
 					//create block
 					var documentFragment = '<br>';
+
 					block.innerHTML = documentFragment;
 
 					//append new block
-					if (cursorNode.innerHTML == '<br>') // 
-						var selectionNode = cursorNode;
+					if (cursorNode.innerHTML == '<br>') // empty block
+						var selectionNode = cursorNode; 
 					else
-						var selectionNode = cursorNode.parentNode;
+						var selectionNode = cursorNode.parentNode; //full block
 					$(selectionNode).before(block)
+				
 
 					//recalibrate range to include the new block
 					range.setEnd(cursorNode, cursorPosition);

@@ -1,18 +1,21 @@
 define(function() {
 	
-	function packageRouter(gift, callback) {
+	function sendUpstream(packet, callback) {
 		var model;
-		if (gift==404)
+		if (packet==404)
 			model = 404
 		else
 		{
-			model = renderModel(gift)
+			model = renderModel(packet)
 
 		}
 			callback(model)	
 	}
 
-	var Model = {}
+	var Model = {
+		parent: "",
+		blocks: []
+	}
 
 
 	function requestModel(paths, callback) {
@@ -24,8 +27,8 @@ define(function() {
 			data: JSON.stringify({parentNodes: paths}),//send as a Buffer? so node can read it
 			success: function(response) {
 				// console.log(response)
-				var gift = response
-				packageRouter(gift, callback) //send the now cached Model to the view
+				var packet = response
+				sendUpstream(packet, callback) //send the now cached Model to the view
 			}
 
 		})
@@ -33,7 +36,8 @@ define(function() {
 
 	function commitChanges(blockList, paths) {
 		console.log(blockList)
-		console.log(paths)
+		// console.log(paths)
+		// console.log(Model)
 
 		var	stage = [];
 
@@ -48,6 +52,7 @@ define(function() {
 			
 			stage.push(obj)
 		}
+		console.log(stage)
 
 		$.ajax({
 			url: '/?commitChanges',
@@ -78,11 +83,17 @@ define(function() {
 			stage = [];
 		for (i=0; i<length; i++)
 		{
+			var block = {
+				id: ids[i],
+				content: blocks[i]
+			}
+			Model.blocks.push(block)
+
 			var block =	"<block data-id='"+ids[i]+"'>"+blocks[i]+"</block>";
 			stage.push(block)
 		}
 		Model.parent = response.parentID;
-		Model.blocks = stage;
+		// Model.blocks = stage;
 		return {blocks:stage, parentID: response.parentID}
 	}
 
