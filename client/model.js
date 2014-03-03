@@ -12,10 +12,8 @@ define(function() {
 			callback(model)	
 	}
 
-	var Model = {
-		parent: "",
-		blocks: []
-	}
+	var Model = []
+
 
 
 	function requestModel(paths, callback) {
@@ -35,9 +33,6 @@ define(function() {
 	}
 
 	function commitChanges(blockList, paths) {
-		console.log(blockList)
-		// console.log(paths)
-		// console.log(Model)
 
 		var	stage = [];
 
@@ -52,7 +47,6 @@ define(function() {
 			
 			stage.push(obj)
 		}
-		console.log(stage)
 
 		$.ajax({
 			url: '/?commitChanges',
@@ -60,7 +54,8 @@ define(function() {
 			dataType: 'json',
 			data: JSON.stringify({
 				paths : paths,
-				stage: stage
+				model : Model,
+				stage : stage
 			}),
 			success: function(response) {
 				// console.log(response)
@@ -76,18 +71,20 @@ define(function() {
 
 	function renderModel(response) {
 		console.log(response)
-		var blocks = response.blocks,
-			ids = response.ids,
-			length = ids.length,
 
-			stage = [];
+		var stage = [],
+
+			blocks = response.blocks,
+			ids = response.ids,
+			length = ids.length;
+
 		for (i=0; i<length; i++)
 		{
 			var block = {
 				id: ids[i],
 				content: blocks[i]
 			}
-			Model.blocks.push(block)
+			Model.push(block)
 
 			var block =	"<block data-id='"+ids[i]+"'>"+blocks[i]+"</block>";
 			stage.push(block)

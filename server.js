@@ -90,18 +90,84 @@ function requestListener(request, response) {
 			/////////////////////////////////////////////
 
 			// update old blocks and insert new blocks
-			askNeo(query, commitLoop, blockSet)
+			// askNeo(query, commitLoop, blockSet)
 
 			//delete old blocks
-			console.log(jsonObject)
+
+			askNeo(query, sortDeleteTypesForWriting, jsonObject)
+
 		})
 	}
+	function sortDeleteTypesForWriting(results, jsonObject) {
+		var oldModel = jsonObject.model,
+			newModel = jsonObject.stage;
 
-	function sql_delete() {
+		var	newArray = [];
+		for (i=0; i<newModel.length; i++)
+		{
+			newArray.push(newModel[i].id)
+		}
+
+		var	deleteList = [];
+		for (i=0; i<oldModel.length; i++)
+		{
+			var oldID = oldModel[i].id,
+				gotDeleted = newArray.indexOf(oldID)
+
+			if (gotDeleted === -1)
+				deleteList.push(oldID)
+		}
+
+		var parent = results.data[0];
+		sql_delete(deleteList)
+		neo_delete(deleteList, parent)
+	}
+	function sql_delete(deleteList) {
+		var query = "DELETE FROM blocks WHERE id IN ("
+
+		for (i=0; i<deleteList.length; i++)
+		{
+			var chunk = "'" +deleteList[i]+ "', "
+			query += chunk
+		}
+		if (query !== "DELETE FROM blocks WHERE IN (" )
+		{
+			query = removeLastComma(query);
+			query += ")";
+			
+			askSQL(query)
+		}
 
 	}
-	function neo_delete() {
+	function neo_delete(deleteList, parent) {
+		var queryStart = "match ",
+			queryEnd = "delete ";
 
+		var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+			char = char.split("");
+		var	char2 = [];
+		for (i=0;i<char.length;i++)
+		{
+			item = "r" + char[i]
+			char2.push(item)
+		}
+
+
+		for (i=0; i<deleteList.length; i++)
+		{
+			var startChunk 	= "(" +char[i]+ ":block {id:'" +deleteList[i]+ "'})<-[" +char2[i]+ ":contains]-(), "
+				endChunk	= char[i] + "," + char2[i] +", "
+			queryStart 	+= startChunk
+			queryEnd 	+= endChunk
+		}
+		if (queryStart !== "match " )
+		{
+			queryStart 	= removeLastComma(queryStart)
+			queryEnd 	= removeLastComma(queryEnd)
+			var query 	= queryStart +queryEnd
+			
+			askNeo(query)
+		}
 	}
 	function commitLoop(result, blockSet) {
 		var	parentID 	= result.data[0],
@@ -136,12 +202,7 @@ function requestListener(request, response) {
 			if (sql_chunks.remove.length >0)
 				sql_deleted = true
 		}
-		var removeLastComma = function(string) {
-			var length = string.length,
-				str = string.substring(0,length-2);
-			str += " "
-			return str
-		};
+
 		neo_match 	= removeLastComma(neo_match)
 		neo_create 	= removeLastComma(neo_create)
 		neo_sort 	= removeLastComma(neo_sort)
@@ -441,3 +502,9 @@ function escapeSpecialCharacters(string) {
 	string = string.replace(/(['"\\])/g, "\\$1")
 	return string
 }
+function removeLastComma(string) {
+	var length = string.length,
+		str = string.substring(0,length-2);
+	str += " "
+	return str
+};
