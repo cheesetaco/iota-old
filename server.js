@@ -101,234 +101,237 @@ function requestListener(request, response) {
 			askNeo(query, sortDeleteTypesForWriting, jsonObject)
 
 		})
+
+
+		
+		function sortDeleteTypesForWriting(results, jsonObject) {
+			var oldModel = jsonObject.model,
+				newModel = jsonObject.stage;
+
+			var	newArray = [];
+			for (i=0; i<newModel.length; i++)
+			{
+				newArray.push(newModel[i].id)
+			}
+
+			var	deleteList = [];
+			for (i=0; i<oldModel.length; i++)
+			{
+				var oldID = oldModel[i].id,
+					gotDeleted = newArray.indexOf(oldID)
+
+				if (gotDeleted === -1)
+					deleteList.push(oldID)
+			}
+
+			var parent = results.data[0];
+			sql_delete(deleteList)
+			neo_delete(deleteList, parent)
+		}
+		function sql_delete(deleteList) {
+			var query = "DELETE FROM blocks WHERE id IN ("
+
+			for (i=0; i<deleteList.length; i++)
+			{
+				var chunk = "'" +deleteList[i]+ "', "
+				query += chunk
+			}
+			if (query !== "DELETE FROM blocks WHERE id IN (" )
+			{
+				query = removeLastComma(query);
+				query += ")";
+				
+				askSQL(query)
+				// console.log(query)
+			}
+
+		}
+		function neo_delete(deleteList, parent) {
+			var queryStart = "match ",
+				queryEnd = "delete ";
+
+			var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				char = char.split("");
+			var	char2 = [];
+			for (i=0;i<char.length;i++)
+			{
+				item = "r" + char[i]
+				char2.push(item)
+			}
+
+
+			for (i=0; i<deleteList.length; i++)
+			{
+				var startChunk 	= "(" +char[i]+ ":block {id:'" +deleteList[i]+ "'})<-[" +char2[i]+ ":contains]-(), "
+					endChunk	= char[i] + "," + char2[i] +", "
+				queryStart 	+= startChunk
+				queryEnd 	+= endChunk
+			}
+			if (queryStart !== "match " )
+			{
+				queryStart 	= removeLastComma(queryStart)
+				queryEnd 	= removeLastComma(queryEnd)
+				var query 	= queryStart +queryEnd
+				
+				askNeo(query)
+				// console.log(query)
+			}
+		}
+
+
+
+
+
+		function commitLoop(result, blockSet) {
+			console.log(blockSet)
+			var	parentID 	= result.data[0],
+				
+				neo_match 	= "match (parent:object {id:'" +parentID+ "'}), ",
+				neo_create 	= "create ",
+				neo_created = false,
+				neo_sort 	= "set ",
+				
+				sql_deleted = false,
+				sql_delete	= "DELETE FROM blocks WHERE id IN (",
+				sql_insert  = "INSERT INTO blocks VALUES ";
+
+			//construct queries
+			for (i=0;i<blockSet.length;i++)
+			{
+				if (blockSet[i].id == null) {
+					var generatedID = generateID();
+					var neo_chunks	= neo_commit(blockSet, i, generatedID);				
+				}
+				else
+					var neo_chunks	= neo_commit(blockSet, i)
+				
+				var sql_chunks 		= sql_commit(blockSet, i, generatedID);
+				
+				neo_match 	+= neo_chunks.match
+				neo_create 	+= neo_chunks.create
+				neo_sort 	+= neo_chunks.sort
+
+				sql_delete 	+= sql_chunks.remove
+				sql_insert 	+= sql_chunks.insert
+
+				if (neo_chunks.create.length > 0)
+					neo_created = true
+				if (sql_chunks.remove.length >0)
+					sql_deleted = true
+			}
+
+			neo_match 	= removeLastComma(neo_match)
+			neo_create 	= removeLastComma(neo_create)
+			neo_sort 	= removeLastComma(neo_sort)
+
+			sql_insert 	= removeLastComma(sql_insert)
+			sql_delete 	= removeLastComma(sql_delete)
+			sql_delete += ")"
+
+			//final queries
+			var neo_query;
+
+			if (neo_created == true)
+				neo_query = neo_match + neo_create + neo_sort
+			else
+				neo_query = neo_match + neo_sort
+
+			askNeo(neo_query)
+
+			if (sql_deleted == true)
+				askSQL(sql_delete, sql_again, sql_insert)
+			else
+				askSQL(sql_insert)
+
+			// testQueries(neo_query)
+
+			// if (sql_deleted == true)
+			// 	testQueries(sql_delete, sql_again, sql_insert)
+			// else
+			// 	testQueries(sql_insert)
+		
+			// console.log(sql_delete)
+			// console.log(sql_insert)
+			// console.log(neo_query)
+		}
+
+		function testQueries(query, callback, object) {
+			console.log(query)
+
+			var result = "meh"
+				if (callback)
+					callback(result, object)
+				else
+					display404Page();
+		}
+
+		function sql_again(rows, query) {
+	console.log(query)
+
+			var connection = mysql.createConnection({
+				host     : 'localhost',
+				user     : 'rooster',
+				password : 'froffles23',
+				database : 'iota',
+			});
+
+			rows ="";
+
+			connection.query(query, function (err, rows, fields) 
+			{
+				if (err) throw err;
+
+				return rows
+			});
+		}	
+		function neo_commit(blockSet, i, generatedID) {
+			var neo_chunks = {
+				match: "",
+				create: "",
+				sort: ""
+			}
+			// console.log(blockSet)
+			var id = blockSet[i].id;
+			// console.log(id)
+			var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+				char = char.split(""),
+				sort = i+1;
+
+			neo_chunks.sort = char[i] + ".sort=" +sort+ ", "
+			
+			if (generatedID)
+				neo_chunks.create = "(parent)-[:contains]->("+ char[i] + ":block {id:'" +generatedID+ "'}), "
+			else
+				neo_chunks.match  = "("+ char[i] + ":block {id:'" +id+ "'}), "
+
+			return neo_chunks
+		}
+
+		function sql_commit(blockSet, i, generatedID) {
+			var sql_chunks = {
+				remove: "",
+				insert: ""
+			};
+
+			var content = escapeSpecialCharacters(blockSet[i].content)
+
+			//update cases
+			if (blockSet[i].id)
+			{
+				var	id = blockSet[i].id;
+				sql_chunks.remove = "'"+id+"', "
+				sql_chunks.insert = "('" +id+ "','" +content+ "'), ";
+			}
+			else {
+				var id = generatedID;
+				sql_chunks.insert = "('" +id+ "','" +content+ "'), ";
+			}
+
+			return sql_chunks
+		}
+
 	}
 	////////////////////////////////////////////////////////////////
-
-	function sortDeleteTypesForWriting(results, jsonObject) {
-		var oldModel = jsonObject.model,
-			newModel = jsonObject.stage;
-
-		var	newArray = [];
-		for (i=0; i<newModel.length; i++)
-		{
-			newArray.push(newModel[i].id)
-		}
-
-		var	deleteList = [];
-		for (i=0; i<oldModel.length; i++)
-		{
-			var oldID = oldModel[i].id,
-				gotDeleted = newArray.indexOf(oldID)
-
-			if (gotDeleted === -1)
-				deleteList.push(oldID)
-		}
-
-		var parent = results.data[0];
-		sql_delete(deleteList)
-		neo_delete(deleteList, parent)
-	}
-	function sql_delete(deleteList) {
-		var query = "DELETE FROM blocks WHERE id IN ("
-
-		for (i=0; i<deleteList.length; i++)
-		{
-			var chunk = "'" +deleteList[i]+ "', "
-			query += chunk
-		}
-		if (query !== "DELETE FROM blocks WHERE id IN (" )
-		{
-			query = removeLastComma(query);
-			query += ")";
-			
-			askSQL(query)
-			// console.log(query)
-		}
-
-	}
-	function neo_delete(deleteList, parent) {
-		var queryStart = "match ",
-			queryEnd = "delete ";
-
-		var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-			char = char.split("");
-		var	char2 = [];
-		for (i=0;i<char.length;i++)
-		{
-			item = "r" + char[i]
-			char2.push(item)
-		}
-
-
-		for (i=0; i<deleteList.length; i++)
-		{
-			var startChunk 	= "(" +char[i]+ ":block {id:'" +deleteList[i]+ "'})<-[" +char2[i]+ ":contains]-(), "
-				endChunk	= char[i] + "," + char2[i] +", "
-			queryStart 	+= startChunk
-			queryEnd 	+= endChunk
-		}
-		if (queryStart !== "match " )
-		{
-			queryStart 	= removeLastComma(queryStart)
-			queryEnd 	= removeLastComma(queryEnd)
-			var query 	= queryStart +queryEnd
-			
-			askNeo(query)
-			// console.log(query)
-		}
-	}
-
-
-
-
-
-	function commitLoop(result, blockSet) {
-		console.log(blockSet)
-		var	parentID 	= result.data[0],
-			
-			neo_match 	= "match (parent:object {id:'" +parentID+ "'}), ",
-			neo_create 	= "create ",
-			neo_created = false,
-			neo_sort 	= "set ",
-			
-			sql_deleted = false,
-			sql_delete	= "DELETE FROM blocks WHERE id IN (",
-			sql_insert  = "INSERT INTO blocks VALUES ";
-
-		//construct queries
-		for (i=0;i<blockSet.length;i++)
-		{
-			if (blockSet[i].id == null) {
-				var generatedID = generateID();
-				var neo_chunks	= neo_commit(blockSet, i, generatedID);				
-			}
-			else
-				var neo_chunks	= neo_commit(blockSet, i)
-			
-			var sql_chunks 		= sql_commit(blockSet, i, generatedID);
-			
-			neo_match 	+= neo_chunks.match
-			neo_create 	+= neo_chunks.create
-			neo_sort 	+= neo_chunks.sort
-
-			sql_delete 	+= sql_chunks.remove
-			sql_insert 	+= sql_chunks.insert
-
-			if (neo_chunks.create.length > 0)
-				neo_created = true
-			if (sql_chunks.remove.length >0)
-				sql_deleted = true
-		}
-
-		neo_match 	= removeLastComma(neo_match)
-		neo_create 	= removeLastComma(neo_create)
-		neo_sort 	= removeLastComma(neo_sort)
-
-		sql_insert 	= removeLastComma(sql_insert)
-		sql_delete 	= removeLastComma(sql_delete)
-		sql_delete += ")"
-
-		//final queries
-		var neo_query;
-
-		if (neo_created == true)
-			neo_query = neo_match + neo_create + neo_sort
-		else
-			neo_query = neo_match + neo_sort
-
-		askNeo(neo_query)
-
-		if (sql_deleted == true)
-			askSQL(sql_delete, sql_again, sql_insert)
-		else
-			askSQL(sql_insert)
-
-		// testQueries(neo_query)
-
-		// if (sql_deleted == true)
-		// 	testQueries(sql_delete, sql_again, sql_insert)
-		// else
-		// 	testQueries(sql_insert)
-	
-		// console.log(sql_delete)
-		// console.log(sql_insert)
-		// console.log(neo_query)
-	}
-
-	function testQueries(query, callback, object) {
-		console.log(query)
-
-		var result = "meh"
-			if (callback)
-				callback(result, object)
-			else
-				display404Page();
-	}
-
-	function sql_again(rows, query) {
-console.log(query)
-
-		var connection = mysql.createConnection({
-			host     : 'localhost',
-			user     : 'rooster',
-			password : 'froffles23',
-			database : 'iota',
-		});
-
-		rows ="";
-
-		connection.query(query, function (err, rows, fields) 
-		{
-			if (err) throw err;
-
-			return rows
-		});
-	}	
-	function neo_commit(blockSet, i, generatedID) {
-		var neo_chunks = {
-			match: "",
-			create: "",
-			sort: ""
-		}
-		// console.log(blockSet)
-		var id = blockSet[i].id;
-		// console.log(id)
-		var char = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-			char = char.split(""),
-			sort = i+1;
-
-		neo_chunks.sort = char[i] + ".sort=" +sort+ ", "
-		
-		if (generatedID)
-			neo_chunks.create = "(parent)-[:contains]->("+ char[i] + ":block {id:'" +generatedID+ "'}), "
-		else
-			neo_chunks.match  = "("+ char[i] + ":block {id:'" +id+ "'}), "
-
-		return neo_chunks
-	}
-
-	function sql_commit(blockSet, i, generatedID) {
-		var sql_chunks = {
-			remove: "",
-			insert: ""
-		};
-
-		var content = escapeSpecialCharacters(blockSet[i].content)
-
-		//update cases
-		if (blockSet[i].id)
-		{
-			var	id = blockSet[i].id;
-			sql_chunks.remove = "'"+id+"', "
-			sql_chunks.insert = "('" +id+ "','" +content+ "'), ";
-		}
-		else {
-			var id = generatedID;
-			sql_chunks.insert = "('" +id+ "','" +content+ "'), ";
-		}
-
-		return sql_chunks
-	}
 
 
 
