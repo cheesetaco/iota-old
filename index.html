@@ -5,9 +5,11 @@
 * {
 	padding	:0;
 	margin 	:0;
-	line-height	: 1.5em; 
-	font-family	: helvetica; 
-	font-size	: 16px;
+	line-height	: 1.7; 
+	vertical-align: baseline;
+	font-family	: 'Open Sans', helvetica; 
+	font-size	: 15px;
+	color 		: rgb(105,105,100);
 }
 seed {
 	color: #FF4719;
@@ -18,6 +20,7 @@ seed:hover {
 }
 block {
 	display	: block;
+	margin-bottom : 5px;
 }
 
 div#content {
@@ -35,15 +38,21 @@ div#edit {
 }
 div#editButton {
 	float:left;
-	width:40%;
+	width:30%;
 	height: 30px; 
-	background-color: green;
+	background-color: gray;
 }
 div#commitChanges {
 	float:left;
-	width:60%;
+	width:40%;
 	height: 30px;
-	background-color: pink;
+	background-color: lime;
+}
+div#test {
+	float:left;
+	width:30%;
+	height: 30px;
+	background-color: tomato;
 }
 [contenteditable="true"]:active,
 [contenteditable="true"]:focus {
@@ -64,7 +73,8 @@ div#four0four {
 
 <div id="edit">
 	<div id="editButton" toggle="off">edit</div>
-	<div id="commitChanges">Commit Changes</div>
+	<div id="commitChanges">Commit</div>
+	<div id="test"> test </div>
 </div>
 <script src="http://localhost:8080/lib/jquery.js"></script>
 
