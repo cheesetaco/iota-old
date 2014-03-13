@@ -7,6 +7,7 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 	{
 		sendPathnameToModel();
 		setupEditButton();
+
 	})
 
 	function setupEditButton() {
@@ -79,8 +80,6 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 		},
 		startupTextEditor: function() 
 		{
-			var that = this;
-
 			//if the content div is empty, create new children blocks
 			var divContent = document.getElementById('content'),
 				block = document.createElement("block");
@@ -97,12 +96,7 @@ require([window.location.origin+'/client/model.js', window.location.origin+'/cli
 				if (e.which == 13) {
 					e.preventDefault();
 
-					that.newlineEnter();
-				}
-				else if (e.which == 8)
-				{
-					// if ($('div#content').children().length == 0)
-						// console.log('nope')
+					editMode.newlineEnter();
 				}
 			});
 		},

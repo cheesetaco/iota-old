@@ -1,3 +1,4 @@
+
 var http = require('http'),
 	fs = require('fs'),
 	neo4j = require('node-neo4j'),
@@ -9,6 +10,7 @@ var http = require('http'),
 
 //______________ Start Server _______________//
 var server = http.createServer(requestListener);
+// server.addListener('connection', function() {console.log("connencted")})
 server.listen(8080);
 
 console.log('Server running at http://127.0.0.1:8080/');
@@ -17,7 +19,7 @@ console.log('Server running at http://127.0.0.1:8080/');
 function requestListener(request, response) {
 	// console.log(__dirname);
 
-
+// console.log(this)
 	function routeList() {
 		var location = request.url,
 			// getChildren = new RegExp("/getChildren\\??.*"),
@@ -59,18 +61,8 @@ function requestListener(request, response) {
 	}
 
 
-	function action_getChildren() {
-		response.writeHead(200, {"Content-Type": "text/json"})
 
-		request.on('data', function(data) {
-			var jsonObject = JSON.parse(data),
-				parentNodes = jsonObject.parentNodes,
-				query = neo_getIDofEndNode(parentNodes);
 
-			// console.log(query)
-			askNeo(query, neo_getBlocksFromID);
-		})
-	}
 
 
 	///////////////////////// master equation /////////////////////
@@ -336,6 +328,18 @@ function requestListener(request, response) {
 
 
 
+	function action_getChildren() {
+		response.writeHead(200, {"Content-Type": "text/json"})
+
+		request.on('data', function(data) {
+			var jsonObject = JSON.parse(data),
+				parentNodes = jsonObject.parentNodes,
+				query = neo_getIDofEndNode(parentNodes);
+
+			// console.log(query)
+			askNeo(query, neo_getBlocksFromID);
+		})
+	}
 
 	function displayBlocks(rows, object) {
 		var blocksArray = [];
@@ -528,3 +532,5 @@ function removeLastComma(string) {
 	str += " "
 	return str
 };
+
+	
